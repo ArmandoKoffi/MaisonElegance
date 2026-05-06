@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script>
+      (function() {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+    <title>Maison Élégance | Votre Boutique de Mode en Ligne à Abidjan</title>
+    <meta name="description" content="Découvrez Maison Élégance, votre destination mode incontournable à Abidjan. Sacs, vêtements et accessoires de luxe accessibles. Livraison 24h, paiement à la livraison." />
+    <meta name="author" content="Maison Élégance" />
+    <meta name="theme-color" content="#1f1410" />
+    <link rel="canonical" href="/" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <meta property="og:title" content="Maison Élégance | Boutique de Mode en Ligne à Abidjan" />
+    <meta property="og:description" content="L'élégance accessible pour l'ivoirienne moderne. Mode, sacs et accessoires livrés en 24h à Abidjan. Paiement à la livraison." />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fr_CI" />
+    <meta property="og:site_name" content="Maison Élégance" />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2000" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Maison Élégance | Boutique de Mode en Ligne" />
+    <meta name="twitter:description" content="Mode et accessoires élégants livrés en 24h à Abidjan. Paiement à la livraison." />
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2000" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "OnlineStore",
+      "name": "Maison Élégance",
+      "image": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2000",
+      "description": "Boutique de mode en ligne à Abidjan. Sacs, vêtements et accessoires de luxe accessibles. Livraison 24h, paiement à la livraison.",
+      "areaServed": ["Abidjan", "Bingerville", "Grand-Bassam", "Songon", "Côte d'Ivoire"],
+      "address": { "@type": "PostalAddress", "addressLocality": "Abidjan", "addressCountry": "CI" }
+    }
+    </script>
+  </head>
+  <body className="antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
