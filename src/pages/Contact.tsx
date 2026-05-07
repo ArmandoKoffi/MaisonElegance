@@ -5,10 +5,10 @@ import { MessageCircle, MapPin, Clock, Headphones, CreditCard, Zap } from "lucid
 import { useReveal } from "@/hooks/useReveal";
 
 const faqs = [
-  { q: "Comment passer commande sur Maison Élégance ?", a: "C'est simple ! Explorez notre boutique en ligne, ajoutez vos articles au panier, puis validez votre panier. Vous serez redirigé vers WhatsApp avec le détail de votre sélection pour finaliser la livraison avec notre équipe." },
+  { q: "Comment passer commande sur Mimi Élégance ?", a: "C'est simple ! Explorez notre boutique en ligne, ajoutez vos articles au panier, puis validez votre panier. Vous serez redirigé vers WhatsApp avec le détail de votre sélection pour finaliser la livraison avec notre équipe." },
   { q: "Quels sont les délais de livraison à Abidjan ?", a: "Pour Abidjan et les communes proches (Bingerville, Bassam, Songon), nous livrons sous 24 heures ouvrées après validation de votre commande." },
   { q: "Puis-je payer à la livraison ?", a: "Absolument. Nous proposons le paiement à la livraison à Abidjan pour que vous puissiez vérifier vos articles avant de payer. Nous acceptons aussi les paiements par Mobile Money." },
-  { q: "Quels types d'articles proposez-vous ?", a: "Maison Élégance est une boutique complète. Nous proposons des sacs à main, des vêtements tendance, des chaussures, des montres et divers accessoires de mode sélectionnés pour leur style et leur qualité." },
+  { q: "Quels types d'articles proposez-vous ?", a: "Mimi Élégance est une boutique complète. Nous proposons des sacs à main, des vêtements tendance, des chaussures, des montres et divers accessoires de mode sélectionnés pour leur style et leur qualité." },
   { q: "Combien coûte la livraison ?", a: "Abidjan / Bingerville : 1 500 FCFA. Bassam / Songon : 2 000 FCFA. Pour l'intérieur du pays, le tarif est fixé selon votre zone géographique (à confirmer avec nous sur WhatsApp)." },
   { q: "Est-il possible d'échanger un article ?", a: "En cas de défaut de fabrication ou de problème de taille sur les vêtements, un échange est possible sous 48h, à condition que l'article soit dans son emballage d'origine et non porté." },
 ];

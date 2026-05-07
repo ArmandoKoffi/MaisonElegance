@@ -26,7 +26,7 @@ const About = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-primary via-transparent to-primary" />
         </div>
         <div className="container-elegance relative z-10 text-center">
-          <p className="text-xs uppercase tracking-[0.6em] text-accent mb-6 reveal font-bold">Maison Élégance • Abidjan</p>
+          <p className="text-xs uppercase tracking-[0.6em] text-accent mb-6 reveal font-bold">Mimi Élégance • Abidjan</p>
           <h1 className="font-serif text-6xl md:text-8xl mb-8 reveal leading-tight">L'Art de Vivre <br /><span className="italic text-accent">avec Élégance</span></h1>
           <p className="max-w-2xl mx-auto text-white/70 leading-relaxed text-xl reveal [animation-delay:200ms]">
             Plus qu'une boutique, une destination mode pour ceux qui recherchent l'exceptionnel au quotidien.
@@ -54,7 +54,7 @@ const About = () => {
             <h2 className="font-serif text-4xl md:text-5xl mb-8 leading-tight">Une mode sans frontières pour l'ivoirienne moderne</h2>
             <div className="space-y-6 text-muted-foreground text-lg leading-relaxed">
               <p>
-                Maison Élégance est née à Abidjan de l'envie d'offrir une expérience de shopping premium, accessible et humaine. 
+                Mimi Élégance est née à Abidjan de l'envie d'offrir une expérience de shopping premium, accessible et humaine. 
                 Ce qui a commencé par une passion pour la maroquinerie est devenu aujourd'hui une boutique complète regroupant 
                 le meilleur de la mode : sacs, vêtements, montres et accessoires de luxe.
               </p>
@@ -105,7 +105,7 @@ const About = () => {
           {[
             { n: "1000+", l: "Articles en Stock", d: "Une variété infinie pour tous les styles." },
             { n: "24h",  l: "Livraison Garantie", d: "À Abidjan et partout en Côte d'Ivoire." },
-            { n: "5000+", l: "Clients Heureux", d: "Rejoignez la communauté Maison Élégance." },
+            { n: "5000+", l: "Clients Heureux", d: "Rejoignez la communauté Mimi Élégance." },
           ].map((s, i) => (
             <div key={s.l} className="reveal" style={{ transitionDelay: `${i * 150}ms` }}>
               <p className="font-serif text-6xl text-accent mb-4">{s.n}</p>

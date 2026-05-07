@@ -40,7 +40,7 @@ const Home = () => {
         </div>
         <div className="container-elegance relative z-10 py-20">
           <div className="max-w-3xl reveal">
-            <p className="text-xs uppercase tracking-[0.5em] text-accent mb-6 font-bold">Maison Élégance • Abidjan</p>
+            <p className="text-xs uppercase tracking-[0.5em] text-accent mb-6 font-bold">Mimi Élégance • Abidjan</p>
             <h1 className="font-serif text-6xl md:text-8xl leading-[0.95] mb-8">
               L'excellence du <span className="italic text-accent text-gradient-gold">Style</span> Ivoirien
             </h1>

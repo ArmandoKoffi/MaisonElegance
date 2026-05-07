@@ -34,7 +34,7 @@ const NotFound = () => {
         </div>
         
         <div className="mt-20 pt-8 border-t border-border/50">
-          <p className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Maison Élégance • Abidjan</p>
+          <p className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Mimi Élégance • Abidjan</p>
         </div>
       </div>
     </div>

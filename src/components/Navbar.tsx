@@ -40,7 +40,7 @@ export const Navbar = () => {
     <header className="sticky top-0 z-40 bg-background/75 backdrop-blur-xl border-b border-border/60 transition-colors duration-500">
       <div className="container-elegance flex items-center justify-between h-16 md:h-20">
         <Link to="/" className="font-serif text-2xl md:text-3xl tracking-wider transition-transform hover:scale-[1.02]">
-          Maison<span className="text-accent">Élégance</span>
+          Mimi<span className="text-accent">Élégance</span>
         </Link>
         <nav className="hidden md:flex items-center gap-10">
           {links.map((l) => (

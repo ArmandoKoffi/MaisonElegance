@@ -108,7 +108,7 @@ const categoryData: Record<string, {
   genders: ('Homme' | 'Femme' | 'Enfant')[]
 }> = {
   sacs: {
-    names: ['Sac à main Royale', 'Pochette de Soirée Étoilée', 'Cabas Signature Maison', 'Sac Bandoulière Luxe', 'Sac à dos Urbain Chic', 'Petit Sac Porté Épaule'],
+    names: ['Sac à main Royale', 'Pochette de Soirée Étoilée', 'Cabas Signature Mimi', 'Sac Bandoulière Luxe', 'Sac à dos Urbain Chic', 'Petit Sac Porté Épaule'],
     descriptions: ['L\'élégance incarnée avec ce sac à main aux finitions dorées.', 'Une pochette raffinée pour vos événements les plus prestigieux.', 'Spacieux et robuste, ce cabas vous accompagnera partout avec style.', 'Cuir premium et design intemporel pour un look sophistiqué.'],
     prices: [15000, 75000],
     genders: ['Femme']
@@ -216,7 +216,7 @@ function generateProducts(count: number) {
         `${images[(Math.floor(Math.random() * images.length))] || baseImg}?q=80&w=800&auto=format&fit=crop`
       ],
       description: description,
-      longDescription: `${description} Découvrez notre collection exclusive Maison Élégance à Abidjan. Ce produit de qualité supérieure a été sélectionné pour vous offrir le meilleur du style contemporain. Finitions soignées, durabilité garantie et allure incomparable.`,
+      longDescription: `${description} Découvrez notre collection exclusive Mimi Élégance à Abidjan. Ce produit de qualité supérieure a été sélectionné pour vous offrir le meilleur du style contemporain. Finitions soignées, durabilité garantie et allure incomparable.`,
       stock,
       stockCount,
       badge: badges[Math.floor(Math.random() * badges.length)],
