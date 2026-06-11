@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { toast } from 'sonner';
 
-const WHATSAPP_NUMBER = '2250151178319';
+const WHATSAPP_NUMBER = '2250556126199';
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
