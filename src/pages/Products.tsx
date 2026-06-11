@@ -58,17 +58,20 @@ const Products = () => {
     setCurrentPage(1);
   }, [search, category, gender, sort]);
 
+  // Map selected slug → category name for filtering
+  const selectedCategoryName = uniqueCategories.find(c => c.slug === category)?.name;
+
   const filteredProducts = products
     .filter((p) => {
       const searchMatch = p.name.toLowerCase().includes(search.toLowerCase());
-      const categoryMatch = category === "all" || p.category === category;
+      const categoryMatch = category === "all" || p.category === selectedCategoryName;
       const genderMatch = gender === "all" || p.gender === gender;
       return searchMatch && categoryMatch && genderMatch;
     })
     .sort((a, b) => {
       if (sort === "price-asc") return a.price - b.price;
       if (sort === "price-desc") return b.price - a.price;
-      return (b.createdAt || 0) - (a.createdAt || 0);
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);

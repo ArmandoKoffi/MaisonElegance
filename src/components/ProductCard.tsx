@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { formatPrice } from "@/data/products";
-import { type Product } from "@/lib/db";
+import { type Product } from "@/lib/supabase";
 import { useCart } from "@/context/CartContext";
 import { Button } from "./ui/button";
 import { Flame, ShoppingCart } from "lucide-react";
@@ -15,6 +15,10 @@ export const ProductCard = ({ product }: { product: Product }) => {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (product.stock === 'out') {
+      toast.error('Ce produit est en rupture de stock.');
+      return;
+    }
     addToCart(product);
     toast.success(`${product.name} ajouté au panier`);
   };
@@ -53,10 +57,10 @@ export const ProductCard = ({ product }: { product: Product }) => {
           <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl flex items-center gap-2 border border-white/20 shadow-xl">
             <span className={cn(
               "w-2 h-2 rounded-full shadow-inner",
-              product.stockCount > 0 ? "bg-green-400 animate-pulse" : "bg-red-400"
+              product.stock !== 'out' ? "bg-green-400 animate-pulse" : "bg-red-400"
             )} />
             <span className="text-[10px] font-bold uppercase tracking-widest text-white">
-               {product.stockCount > 0 ? `${product.stockCount} dispo` : "Épuisé"}
+               {product.stock !== 'out' ? `${product.stock_count} dispo` : "Épuisé"}
             </span>
           </div>
           <span className="bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-lg text-[8px] uppercase tracking-[0.2em] font-bold border border-white/20 text-white/90">
@@ -82,11 +86,11 @@ export const ProductCard = ({ product }: { product: Product }) => {
         >
           <Button 
             onClick={handleAddToCart}
-            disabled={product.stockCount === 0}
+            disabled={product.stock === 'out'}
             className="w-full gap-2 rounded-xl py-6 font-bold btn-slide bg-accent text-white border-none shadow-none"
           >
             <ShoppingCart className="w-5 h-5 relative z-10" />
-            <span className="relative z-10">{product.stockCount === 0 ? "Indisponible" : "Ajouter au panier"}</span>
+            <span className="relative z-10">{product.stock === 'out' ? "Indisponible" : "Ajouter au panier"}</span>
           </Button>
         </motion.div>
       </div>
