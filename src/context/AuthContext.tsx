@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = useCallback(async (data: RegisterData) => {
     try {
-      // 1. Create auth user
+      // 1. Create auth user with all metadata so the trigger can use it
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -95,7 +95,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             first_name: data.firstName,
             last_name: data.lastName,
-            role: 'client' // Or Admin if you want to allow it, but usually restricted
+            phone: data.phone,
+            role: 'client'
           }
         }
       });
@@ -108,25 +109,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (authData.user) {
-        // Note: The handle_new_user trigger in Postgres will auto-create the public.users row
-        // We just need to update the remaining fields (phone, address, city)
-        const { error: updateError } = await supabase
+        // Update remaining fields (phone, address, city) — the trigger creates the row
+        await supabase
           .from('users')
           .update({
             phone: data.phone,
-            address: data.address,
-            city: data.city
+            address: data.address || null,
+            city: data.city || null,
           })
           .eq('id', authData.user.id);
-
-        if (updateError) {
-          console.error('Erreur mise à jour infos complémentaires:', updateError);
-        }
       }
 
       return { success: true };
     } catch (err) {
-      return { success: false, error: 'Une erreur est survenue lors de l\'inscription.' };
+      return { success: false, error: "Une erreur est survenue lors de l'inscription." };
     }
   }, []);
 

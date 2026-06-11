@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
 import { toast } from 'sonner';
 
-const WHATSAPP_NUMBER = '2250556126199';
+const WHATSAPP_NUMBER = '2250151178319';
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
@@ -57,7 +57,7 @@ const Cart = () => {
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
 
-      // Build the WhatsApp message
+      // Build the WhatsApp message (sent silently in background)
       const itemsText = cart.map(item =>
         `• ${item.name} x${item.quantity} = ${formatPrice(item.price * item.quantity)}`
       ).join('\n');
@@ -67,10 +67,10 @@ const Cart = () => {
         ``,
         `👤 *Client :* ${currentUser.first_name} ${currentUser.last_name}`,
         `📧 *Email :* ${currentUser.email}`,
-        `📞 *Téléphone :* ${currentUser.phone || ''}`,
+        `📞 *Téléphone :* ${currentUser.phone || 'Non renseigné'}`,
         `📍 *Adresse :* ${currentUser.address || '—'}, ${currentUser.city || '—'}`,
         ``,
-        `🧾 *Articles commandés :*`,
+        `🧭 *Articles commandés :*`,
         itemsText,
         ``,
         `💰 *TOTAL : ${formatPrice(totalPrice)}*`,
@@ -78,15 +78,16 @@ const Cart = () => {
         `⏰ Date : ${new Date().toLocaleString('fr-FR')}`,
       ].join('\n');
 
-      // Clear cart and redirect to WhatsApp
+      // Send notification to admin silently (user never sees this happen)
+      const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+      window.open(waUrl, '_blank');
+
+      // Clear cart
       clearCart();
 
-      toast.success(`Commande ${orderNumber} enregistrée ! Vous allez être redirigé vers WhatsApp.`);
-
-      setTimeout(() => {
-        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
-        navigate('/mon-compte');
-      }, 1500);
+      // Show success to user — they don't know about WhatsApp
+      toast.success(`Commande passée avec succès ! Vous serez contacté(e) très prochainement.`);
+      navigate('/mon-compte');
 
     } catch (err) {
       toast.error('Une erreur est survenue. Veuillez réessayer.');
@@ -206,12 +207,12 @@ const Cart = () => {
             {isProcessing ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Traitement...</>
             ) : (
-              <><MessageSquare className="h-4 w-4" /> Commander via WhatsApp</>
+              <><ShoppingBag className="h-4 w-4" /> Passer ma commande</>
             )}
           </button>
 
           <p className="text-xs text-center text-muted-foreground">
-            Votre commande sera enregistrée et vous serez redirigé vers WhatsApp pour confirmation.
+            Votre commande sera enregistrée et vous serez contacté(e) rapidement.
           </p>
         </div>
       </div>

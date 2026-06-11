@@ -42,6 +42,10 @@ const ProductDetail = () => {
   const isLow = product.stock === "low";
 
   const handleAddToCart = () => {
+    if (product.stock === 'out' || product.stock_count === 0) {
+      toast.error('Ce produit est en rupture de stock.');
+      return;
+    }
     addToCart(product);
     toast.success(`${product.name} ajouté au panier`);
   };

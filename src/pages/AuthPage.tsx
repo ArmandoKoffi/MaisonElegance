@@ -22,7 +22,7 @@ const AuthPage = () => {
     setIsLoading(false);
     if (result.success) {
       toast.success('Bon retour parmi nous !');
-      navigate(from, { replace: true });
+      navigate('/mon-compte', { replace: true });
     } else {
       toast.error(result.error);
     }
@@ -65,7 +65,7 @@ const AuthPage = () => {
     setIsLoading(false);
     if (result.success) {
       toast.success('Compte créé avec succès ! Bienvenue !');
-      navigate(from, { replace: true });
+      navigate('/mon-compte', { replace: true });
     } else {
       toast.error(result.error);
     }
