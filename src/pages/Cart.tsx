@@ -6,18 +6,18 @@ import { Trash2, Plus, Minus, MessageSquare, ShoppingBag, User, Loader2, Lock } 
 import { formatPrice } from '@/data/products';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { buildWhatsAppLink } from '@/lib/whatsapp';
+
 import { toast } from 'sonner';
 
 const WHATSAPP_NUMBER = '2250151178319';
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
-  const [whatsAppLink, setWhatsAppLink] = useState<string | null>(null);
+
+
   const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
-
   const handleCheckout = async () => {
     if (!isAuthenticated) {
       toast.error('Veuillez vous connecter pour passer une commande.');
@@ -85,7 +85,6 @@ const Cart = () => {
       if (typeof window !== 'undefined') {
         window.open(waUrl, '_blank');
       }
-      setWhatsAppLink(waUrl);
 
       // Clear cart
       clearCart();
@@ -215,17 +214,6 @@ const Cart = () => {
               <><ShoppingBag className="h-4 w-4" /> Passer ma commande</>
             )}
           </button>
-
-          {whatsAppLink && (
-            <a
-              href={whatsAppLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-block w-full py-3 bg-green-600 text-white rounded-xl font-bold text-center hover:bg-green-700 transition"
-            >
-              Envoyer la commande via WhatsApp
-            </a>
-          )}
 
           <p className="text-xs text-center text-muted-foreground">
             Votre commande sera enregistrée et vous serez contacté(e) rapidement.
