@@ -23,7 +23,7 @@ const statusConfig: Record<Order['status'], { label: string; color: string; icon
 type OrderWithItems = Order & { order_items: OrderItem[] };
 
 const MyAccount = () => {
-  const { currentUser, logout, isAuthenticated, isLoading } = useAuth();
+  const { currentUser, isAdmin, isAuthenticated, isLoading, logout, login, register } = useAuth();
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
 
   const { data: orders = [] } = useQuery({
@@ -101,6 +101,9 @@ const MyAccount = () => {
               <div className="flex items-center gap-3 text-sm">
                 <Phone className="w-4 h-4 text-accent shrink-0" />
                 <span className="text-muted-foreground">{currentUser?.phone || '—'}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-muted-foreground">{currentUser?.role ?? '—'}</span>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <MapPin className="w-4 h-4 text-accent shrink-0" />
