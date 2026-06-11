@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { Truck, Shield, Wallet, Award, Star, Flame, Smartphone, ShoppingBag, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 import { ProductCard } from "@/components/ProductCard";
 import { useReveal } from "@/hooks/useReveal";
 import heroImage from '../assets/heroImage.jfif';
@@ -23,8 +23,23 @@ const steps = [
 
 const Home = () => {
   useReveal();
-  const featuredProducts = useLiveQuery(() => db.products.limit(8).toArray()) || [];
-  const categories = useLiveQuery(() => db.categories.toArray()) || [];
+  const { data: featuredProducts = [] } = useQuery({
+    queryKey: ['featuredProducts'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('products').select('*').limit(8).order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('categories').select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
 
   return (
     <>

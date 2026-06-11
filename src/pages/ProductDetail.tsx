@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 import { formatPrice } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
@@ -17,15 +17,23 @@ const ProductDetail = () => {
   const [activeImage, setActiveImage] = useState(0);
   useReveal();
 
-  const product = useLiveQuery(() => {
-    if (!id) return undefined;
-    return db.products.get(Number(id));
-  }, [id]);
+  const { data: product, isLoading } = useQuery({
+    queryKey: ['product', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase.from('products').select('*').eq('id', Number(id)).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id
+  });
 
   if (!product) {
     return (
       <div className="container-elegance py-32 text-center">
-        <h1 className="font-serif text-3xl mb-4 text-muted-foreground animate-pulse">Chargement...</h1>
+        <h1 className="font-serif text-3xl mb-4 text-muted-foreground animate-pulse">
+          {isLoading ? "Chargement..." : "Produit introuvable"}
+        </h1>
         <Link to="/produits" className="text-accent underline">Retour à la boutique</Link>
       </div>
     );

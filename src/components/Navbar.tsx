@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, X, ShoppingCart, Settings, Sun, Moon } from "lucide-react";
+import { Menu, X, ShoppingCart, Sun, Moon, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 const links = [
@@ -16,6 +17,7 @@ export const Navbar = () => {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   const { totalItems } = useCart();
+  const { isAuthenticated } = useAuth();
   
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
@@ -74,6 +76,10 @@ export const Navbar = () => {
             </motion.div>
             <span className="absolute inset-0 bg-accent/10 scale-0 group-hover:scale-100 transition-transform rounded-full -z-10" />
           </button>
+
+          <Link to="/mon-compte" className="relative p-2 rounded-full hover:bg-secondary transition-colors btn-press">
+            <User className={cn("w-6 h-6", isAuthenticated ? "text-accent" : "")} />
+          </Link>
 
           <Link to="/panier" className="relative p-2 rounded-full hover:bg-secondary transition-colors btn-press">
             <ShoppingCart className="w-6 h-6" />

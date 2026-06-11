@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 import { ProductCard } from "@/components/ProductCard";
 import { cn } from "@/lib/utils";
 import { useReveal } from "@/hooks/useReveal";
@@ -26,8 +26,23 @@ const Products = () => {
     }
   }, [searchParams]);
 
-  const products = useLiveQuery(() => db.products.toArray()) || [];
-  const rawCategories = useLiveQuery(() => db.categories.toArray()) || [];
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('products').select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: rawCategories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('categories').select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
   
   // Remove duplicate categories if they exist in the DB to prevent React key warnings
   const uniqueCategories = Array.from(new Map(rawCategories.map(c => [c.slug, c])).values());
