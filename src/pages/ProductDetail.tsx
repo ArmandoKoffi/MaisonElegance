@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { type Product } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { formatPrice } from "@/data/products";
 import { useCart } from "@/context/CartContext";
@@ -118,8 +119,8 @@ const ProductDetail = () => {
               </div>
               <div className="p-4 bg-secondary/30 rounded-xl border border-border/50">
                 <span className="text-xs uppercase tracking-widest text-muted-foreground block mb-1">Stock disponible</span>
-                <span className={`font-bold ${product.stockCount > 0 ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
-                  {product.stockCount > 0 ? `${product.stockCount} articles` : "Rupture de stock"}
+                <span className={`font-bold ${product.stock_count > 0 ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
+                  {product.stock_count > 0 ? `${product.stock_count} articles` : "Rupture de stock"}
                 </span>
               </div>
             </div>
@@ -128,11 +129,11 @@ const ProductDetail = () => {
               <motion.div whileTap={{ scale: 0.95 }} className="flex-1">
                 <Button 
                   onClick={handleAddToCart} 
-                  disabled={product.stockCount === 0}
+                  disabled={product.stock === 'out'}
                   className="w-full gap-3 py-7 text-lg rounded-2xl font-bold shadow-lg shadow-primary/20 btn-slide bg-primary"
                 >
                   <ShoppingCart className="w-6 h-6 relative z-10" />
-                  <span className="relative z-10">{product.stockCount > 0 ? "Ajouter au panier" : "Indisponible"}</span>
+                  <span className="relative z-10">{product.stock_count > 0 ? "Ajouter au panier" : "Indisponible"}</span>
                 </Button>
               </motion.div>
               <motion.div whileTap={{ scale: 0.95 }} className="flex-1">
