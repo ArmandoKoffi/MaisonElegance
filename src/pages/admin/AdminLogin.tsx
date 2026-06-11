@@ -75,8 +75,8 @@ const AdminLogin = () => {
                 name="email"
                 type="email"
                 required
-                defaultValue="admin@mimielegance.ci"
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-all placeholder:text-gray-600"
+                placeholder="votre@email.com"
               />
             </div>
             <div>
@@ -110,12 +110,7 @@ const AdminLogin = () => {
             </button>
           </form>
 
-          <div className="mt-6 p-3 bg-gray-800/50 rounded-xl border border-gray-800">
-            <p className="text-gray-500 text-xs text-center">
-              Email par défaut : <code className="text-accent">admin@mimielegance.ci</code><br />
-              Mot de passe par défaut : <code className="text-accent">Admin2024!</code>
-            </p>
-          </div>
+
         </div>
       </motion.div>
     </div>
