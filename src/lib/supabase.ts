@@ -69,6 +69,16 @@ export interface Database {
           slug: string;
           image: string;
         };
+        Insert: {
+          name: string;
+          slug: string;
+          image: string;
+        };
+        Update: {
+          name?: string;
+          slug?: string;
+          image?: string;
+        };
       };
       orders: {
         Row: {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Outlet, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Package, LogOut, ShoppingBag, ShoppingCart, Users, BarChart3, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, LogOut, ShoppingBag, ShoppingCart, Users, BarChart3, Menu, X, Tags } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useState } from 'react';
@@ -21,6 +21,7 @@ const AdminLayout = () => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/admin' },
+    { icon: Tags, label: 'Catégories', path: '/admin/categories' },
     { icon: Package, label: 'Produits', path: '/admin/produits' },
     { icon: ShoppingCart, label: 'Commandes', path: '/admin/commandes' },
     { icon: Users, label: 'Clients', path: '/admin/clients' },
@@ -51,7 +52,7 @@ const AdminLayout = () => {
             <Users className="w-4 h-4 text-accent" />
           </div>
           <div>
-            <p className="text-white text-xs font-semibold">{currentUser.firstName} {currentUser.lastName}</p>
+            <p className="text-white text-xs font-semibold">{currentUser.first_name} {currentUser.last_name}</p>
             <p className="text-gray-500 text-xs">Administrateur</p>
           </div>
         </div>

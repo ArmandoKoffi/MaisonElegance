@@ -16,6 +16,7 @@ import AuthPage from "@/pages/AuthPage";
 import MyAccount from "@/pages/MyAccount";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import ManageProducts from "@/pages/admin/ManageProducts";
+import ManageCategories from "@/pages/admin/ManageCategories";
 import ManageOrders from "@/pages/admin/ManageOrders";
 import ManageClients from "@/pages/admin/ManageClients";
 import Finances from "@/pages/admin/Finances";
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/admin/connexion" element={<AdminLogin />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
+                <Route path="categories" element={<ManageCategories />} />
                 <Route path="produits" element={<ManageProducts />} />
                 <Route path="commandes" element={<ManageOrders />} />
                 <Route path="clients" element={<ManageClients />} />
