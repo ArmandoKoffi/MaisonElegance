@@ -81,6 +81,10 @@ const Cart = () => {
 
       // Send notification to admin silently (user never sees this happen)
       const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+      // Open WhatsApp link in a new tab for the user
+      if (typeof window !== 'undefined') {
+        window.open(waUrl, '_blank');
+      }
       setWhatsAppLink(waUrl);
 
       // Clear cart
