@@ -163,11 +163,29 @@ const ManageProducts = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="price">Prix (FCFA)</Label>
-                <Input id="price" name="price" type="number" defaultValue={editingProduct?.price} required />
+                <Input 
+                  id="price" 
+                  name="price" 
+                  type="number" 
+                  min="0"
+                  step="1"
+                  onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault() }}
+                  defaultValue={editingProduct?.price} 
+                  required 
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stockCount">Quantité en Stock</Label>
-                <Input id="stockCount" name="stockCount" type="number" defaultValue={editingProduct?.stock_count || 50} required />
+                <Input 
+                  id="stockCount" 
+                  name="stockCount" 
+                  type="number" 
+                  min="0"
+                  step="1"
+                  onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault() }}
+                  defaultValue={editingProduct?.stock_count ?? 50} 
+                  required 
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Catégorie</Label>

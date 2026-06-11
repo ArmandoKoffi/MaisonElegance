@@ -124,6 +124,7 @@ const ManageCategories = () => {
                   defaultValue={editingCategory?.name} 
                   required 
                   placeholder="Ex: Sacs à main, Chaussures..."
+                  onInput={(e) => e.currentTarget.value = e.currentTarget.value.replace(/[<>]/g, '')}
                 />
               </div>
               <div className="space-y-2">

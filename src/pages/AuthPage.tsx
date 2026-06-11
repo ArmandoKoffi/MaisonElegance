@@ -34,18 +34,32 @@ const AuthPage = () => {
     const fd = new FormData(e.currentTarget);
     const password = fd.get('password') as string;
     const confirm = fd.get('confirmPassword') as string;
+    
+    const firstName = (fd.get('firstName') as string).trim();
+    const lastName = (fd.get('lastName') as string).trim();
+    const email = (fd.get('email') as string).trim();
+    const phone = (fd.get('phone') as string).trim();
+    const address = (fd.get('address') as string).trim();
+    const city = (fd.get('city') as string).trim();
+
+    if (!firstName || !lastName || !email || !phone || !password) {
+      toast.error('Veuillez remplir tous les champs obligatoires.');
+      setIsLoading(false);
+      return;
+    }
+
     if (password !== confirm) {
       toast.error('Les mots de passe ne correspondent pas.');
       setIsLoading(false);
       return;
     }
     const result = await register({
-      firstName: fd.get('firstName') as string,
-      lastName: fd.get('lastName') as string,
-      email: fd.get('email') as string,
-      phone: fd.get('phone') as string,
-      address: fd.get('address') as string,
-      city: fd.get('city') as string,
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      city,
       password,
     });
     setIsLoading(false);
@@ -141,11 +155,27 @@ const AuthPage = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className={labelClass}>Prénom</label>
-                      <input name="firstName" required className={inputClass} placeholder="Ama" />
+                      <input 
+                        name="firstName" 
+                        required 
+                        className={inputClass} 
+                        placeholder="Ama"
+                        pattern="^[a-zA-ZÀ-ÿ\s\-']+$"
+                        title="Veuillez n'entrer que des lettres"
+                        onInput={(e) => e.currentTarget.value = e.currentTarget.value.replace(/[^a-zA-ZÀ-ÿ\s\-']/g, '')}
+                      />
                     </div>
                     <div>
                       <label className={labelClass}>Nom</label>
-                      <input name="lastName" required className={inputClass} placeholder="Konan" />
+                      <input 
+                        name="lastName" 
+                        required 
+                        className={inputClass} 
+                        placeholder="Konan"
+                        pattern="^[a-zA-ZÀ-ÿ\s\-']+$"
+                        title="Veuillez n'entrer que des lettres"
+                        onInput={(e) => e.currentTarget.value = e.currentTarget.value.replace(/[^a-zA-ZÀ-ÿ\s\-']/g, '')}
+                      />
                     </div>
                   </div>
                   <div>
@@ -154,15 +184,37 @@ const AuthPage = () => {
                   </div>
                   <div>
                     <label className={labelClass}>Téléphone (WhatsApp)</label>
-                    <input name="phone" type="tel" required className={inputClass} placeholder="+225 0700000000" />
+                    <input 
+                      name="phone" 
+                      type="tel" 
+                      required 
+                      className={inputClass} 
+                      placeholder="+2250700000000"
+                      pattern="^\+?[0-9]{8,15}$"
+                      title="Veuillez n'entrer que des chiffres et éventuellement un + au début"
+                      maxLength={15}
+                      onInput={(e) => e.currentTarget.value = e.currentTarget.value.replace(/[^\d+]/g, '')}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Adresse de livraison</label>
-                    <input name="address" className={inputClass} placeholder="Quartier, rue..." />
+                    <input 
+                      name="address" 
+                      className={inputClass} 
+                      placeholder="Quartier, rue..."
+                      onInput={(e) => e.currentTarget.value = e.currentTarget.value.replace(/[<>]/g, '')}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Ville</label>
-                    <input name="city" className={inputClass} placeholder="Abidjan" />
+                    <input 
+                      name="city" 
+                      className={inputClass} 
+                      placeholder="Abidjan"
+                      pattern="^[a-zA-ZÀ-ÿ\s\-']+$"
+                      title="Veuillez n'entrer que des lettres"
+                      onInput={(e) => e.currentTarget.value = e.currentTarget.value.replace(/[^a-zA-ZÀ-ÿ\s\-']/g, '')}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Mot de passe</label>
