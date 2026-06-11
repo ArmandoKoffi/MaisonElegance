@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
 import { cn } from "@/lib/utils";
 import { useReveal } from "@/hooks/useReveal";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ShoppingBag } from "lucide-react";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -226,6 +226,23 @@ const Products = () => {
                   </div>
                 )}
               </>
+            ) : products.length === 0 ? (
+              <div className="text-center py-24 bg-card/50 rounded-[3rem] border border-dashed border-border reveal">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/10 mb-6">
+                  <ShoppingBag className="w-8 h-8 text-accent" />
+                </div>
+                <p className="font-serif text-3xl md:text-4xl mb-4">Bientôt Disponible</p>
+                <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto leading-relaxed">
+                  Notre nouvelle collection arrive très prochainement. Tous nos articles actuels sont momentanément épuisés.
+                  Restez connectés pour découvrir nos nouvelles pépites !
+                </p>
+                <button 
+                  onClick={() => { window.location.href = "/"; }}
+                  className="px-8 py-4 bg-primary text-white rounded-full uppercase tracking-widest font-bold text-xs btn-slide"
+                >
+                  <span className="relative z-10">Retour à l'accueil</span>
+                </button>
+              </div>
             ) : (
               <div className="text-center py-24 bg-card/50 rounded-[3rem] border border-dashed border-border reveal">
                 <p className="font-serif text-3xl mb-4">Aucun article trouvé</p>
@@ -234,7 +251,7 @@ const Products = () => {
                   onClick={() => { setCategory("all"); setGender("all"); setSearch(""); }}
                   className="px-8 py-4 bg-primary text-white rounded-full uppercase tracking-widest font-bold text-xs btn-slide"
                 >
-                  <span className="relative z-10">Réinitialiser</span>
+                  <span className="relative z-10">Réinitialiser les filtres</span>
                 </button>
               </div>
             )}

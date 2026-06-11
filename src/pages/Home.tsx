@@ -152,13 +152,26 @@ const Home = () => {
               Voir toute la boutique <span className="w-12 h-[2px] bg-accent group-hover:bg-primary transition-all" />
             </Link>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
-            {featuredProducts.map((p, i) => (
-              <div key={p.id} className="reveal" style={{ transitionDelay: `${i * 150}ms` }}>
-                <ProductCard product={p as any} />
+          {featuredProducts.length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
+              {featuredProducts.map((p, i) => (
+                <div key={p.id} className="reveal" style={{ transitionDelay: `${i * 150}ms` }}>
+                  <ProductCard product={p as any} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-20 bg-card rounded-[3rem] border border-dashed border-border reveal">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/10 mb-6">
+                <ShoppingBag className="w-8 h-8 text-accent" />
               </div>
-            ))}
-          </div>
+              <h3 className="font-serif text-3xl md:text-4xl mb-4">Bientôt Disponible</h3>
+              <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
+                Notre nouvelle collection arrive très prochainement. Tous nos articles actuels sont momentanément épuisés. 
+                Restez connectés pour découvrir nos nouvelles pépites très vite !
+              </p>
+            </div>
+          )}
         </div>
       </section>
 

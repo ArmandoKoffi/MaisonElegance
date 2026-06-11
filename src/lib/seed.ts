@@ -227,30 +227,24 @@ function generateProducts(count: number) {
 }
 
 export async function seedDatabase() {
-  const categoryCount = await db.categories.count();
-  if (categoryCount < categories.length) {
-    await db.categories.clear();
-    await db.categories.bulkAdd(categories);
-  }
+  const isSeeded = localStorage.getItem('db_seeded_v2');
+  
+  if (!isSeeded) {
+    console.log("Initialisation de la base de données : Suppression des données de test...");
+    
+    // Seed categories if empty
+    const categoryCount = await db.categories.count();
+    if (categoryCount === 0) {
+      await db.categories.bulkAdd(categories);
+    }
 
-  const productCount = await db.products.count();
-  // Check for generic names, missing images, or legacy "Unisexe" gender to force re-seed
-  const firstProduct = await db.products.toCollection().first();
-  const isGeneric = firstProduct?.name.includes("Modèle") || firstProduct?.description.includes("article d'exception");
-  const hasMissingImages = (await db.products.filter(p => !p.image).count()) > 0;
-  
-  // More thorough check for legacy data
-  const hasLegacyUnisexe = (await db.products.filter(p => p.gender as string === "Unisexe").count()) > 0;
-  const hasEnfantProducts = (await db.products.where("gender").equals("Enfant").count()) > 0;
-  const hasCompleteGallery = (await db.products.filter(p => (p.images?.length || 0) >= 6).count()) > 0;
-  
-  if (productCount < 500 || isGeneric || hasMissingImages || hasLegacyUnisexe || !hasEnfantProducts || !hasCompleteGallery) {
-    console.log("Legacy or incomplete data detected. Re-seeding database with realistic content...");
+    // Effacer toutes les données de test (produits)
     await db.products.clear();
-    await db.categories.clear(); // Clear categories too to get the "Mode Enfant" category
-    await db.categories.bulkAdd(categories);
-    const products = generateProducts(500);
-    await db.products.bulkAdd(products);
-    console.log("Database seeded with 500 realistic products (verified Enfant & images)");
+    console.log("Les produits de test ont été supprimés.");
+    
+    // Mark as seeded
+    localStorage.setItem('db_seeded_v2', 'true');
+  } else {
+    console.log("Base de données opérationnelle.");
   }
 }
