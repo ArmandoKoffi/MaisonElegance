@@ -81,14 +81,14 @@ const ManageClients = () => {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Mail className="w-3.5 h-3.5" />{client.email}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Phone className="w-3.5 h-3.5" />{client.phone || '—'}
                   </div>
-                  {(client.address || client.city) && (
+                  {(!client.city ? "Retrait en magasin" : (client.city === "Abidjan" && client.address ? `${client.address}, ${client.city}` : client.city)) && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <MapPin className="w-3.5 h-3.5" />{client.address || '—'}, {client.city || '—'}
+                      <MapPin className="w-3.5 h-3.5" />
+                      {!client.city ? "Retrait en magasin" : 
+                       client.city === "Abidjan" && client.address ? `${client.address}, ${client.city}` : 
+                       client.city}
                     </div>
                   )}
                 </div>

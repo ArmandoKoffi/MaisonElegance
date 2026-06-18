@@ -6,18 +6,34 @@ import { Trash2, Plus, Minus, MessageSquare, ShoppingBag, User, Loader2, Lock } 
 import { formatPrice } from '@/data/products';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cities as villes, neighborhoodsAbidjan as adressesAbidjan } from '@/lib/shipping';
 
 import { toast } from 'sonner';
 
 const WHATSAPP_NUMBER = '2250556126199';
 
+// Helper to get shipping cost
+const getShippingCost = (city: string | null | undefined, address: string | null | undefined): number => {
+  if (!city) return 0;
+  
+  const cityData = villes.find(v => v.name === city);
+  if (cityData && cityData.name === "Abidjan") {
+    const addressData = adressesAbidjan.find(a => a.name === address);
+    return addressData?.price || 0;
+  }
+  return cityData?.price || 0;
+};
+
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
-
-
-  const { currentUser, isAuthenticated } = useAuth();
+  const { currentUser, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Calculate shipping cost
+  const shippingCost = getShippingCost(currentUser?.city, currentUser?.address);
+  const finalTotal = totalPrice + shippingCost;
+  
   const handleCheckout = async () => {
     if (!isAuthenticated) {
       toast.error('Veuillez vous connecter pour passer une commande.');
@@ -26,10 +42,19 @@ const Cart = () => {
     }
 
     if (!currentUser) return;
+    
+    // Check if we have shipping info if city selected
+    if (currentUser.city === "Abidjan" && !currentUser.address) {
+      toast.error('Veuillez sélectionner un quartier pour la livraison à Abidjan.');
+      navigate('/connexion', { state: { from: '/panier' } });
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
       const orderNumber = `CMD-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      const isPickup = !currentUser.city;
 
       // Insert Order
       const { data: orderData, error: orderError } = await supabase.from('orders').insert({
@@ -38,8 +63,8 @@ const Cart = () => {
         customer_name: `${currentUser.first_name} ${currentUser.last_name}`,
         customer_email: currentUser.email,
         customer_phone: currentUser.phone || '',
-        customer_address: `${currentUser.address || '—'}, ${currentUser.city || '—'}`,
-        total_amount: totalPrice,
+        customer_address: isPickup ? "Retrait en magasin" : `${currentUser.address || '—'}, ${currentUser.city || '—'}`,
+        total_amount: finalTotal,
         status: 'pending'
       }).select('id').single();
 
@@ -67,14 +92,16 @@ const Cart = () => {
         `🛍️ *Nouvelle commande — ${orderNumber}*`,
         ``,
         `👤 *Client :* ${currentUser.first_name} ${currentUser.last_name}`,
-        `📧 *Email :* ${currentUser.email}`,
         `📞 *Téléphone :* ${currentUser.phone || 'Non renseigné'}`,
-        `📍 *Adresse :* ${currentUser.address || '—'}, ${currentUser.city || '—'}`,
+        isPickup ? `🏪 *Mode :* RETRAIT EN MAGASIN` : `📍 *Adresse :* ${currentUser.address || '—'}, ${currentUser.city || '—'}`,
         ``,
         `🧭 *Articles commandés :*`,
         itemsText,
         ``,
-        `💰 *TOTAL : ${formatPrice(totalPrice)}*`,
+        `💵 *Sous-total :* ${formatPrice(totalPrice)}`,
+        isPickup ? `🚚 *Frais de livraison :* GRATUIT` : `🚚 *${currentUser.city === "Abidjan" ? "Frais de livraison" : "Frais d'expédition"} :* ${formatPrice(shippingCost)}`,
+        ``,
+        `💰 *TOTAL : ${formatPrice(finalTotal)}*`,
         ``,
         `⏰ Date : ${new Date().toLocaleString('fr-FR')}`,
       ].join('\n');
@@ -176,19 +203,80 @@ const Cart = () => {
         <div className="bg-card border border-border rounded-[2rem] p-6 h-fit space-y-6 shadow-elegant sticky top-28">
           <h2 className="font-serif text-2xl">Récapitulatif</h2>
 
-          <div className="space-y-3 border-b border-border pb-5">
-            {cart.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-muted-foreground truncate max-w-[160px]">{item.name} × {item.quantity}</span>
-                <span className="font-semibold">{formatPrice(item.price * item.quantity)}</span>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="w-8 h-8 text-accent animate-spin" />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3 border-b border-border pb-5">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground truncate max-w-[160px]">{item.name} × {item.quantity}</span>
+                    <span className="font-semibold">{formatPrice(item.price * item.quantity)}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className="flex justify-between text-lg font-bold">
-            <span>Total</span>
-            <span className="text-accent">{formatPrice(totalPrice)}</span>
-          </div>
+              <div className="space-y-3">
+                <AnimatePresence mode="popLayout">
+                  <motion.div 
+                    key="subtotal"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex justify-between text-sm"
+                  >
+                    <span className="text-muted-foreground">Sous-total</span>
+                    <span className="font-semibold">{formatPrice(totalPrice)}</span>
+                  </motion.div>
+
+                  {isAuthenticated && (
+                    <>
+                      {currentUser?.city ? (
+                        <motion.div
+                          key="shipping"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="flex justify-between text-sm overflow-hidden"
+                        >
+                          <span className="text-muted-foreground">
+                            {currentUser.city === "Abidjan" ? "Frais de livraison" : "Frais d'expédition"}
+                          </span>
+                          <span className="font-semibold text-accent">{formatPrice(shippingCost)}</span>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="pickup"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="flex justify-between text-sm overflow-hidden"
+                        >
+                          <span className="text-muted-foreground">Mode de récupération</span>
+                          <span className="font-semibold text-green-600">Retrait en magasin</span>
+                        </motion.div>
+                      )}
+                    </>
+                  )}
+
+                  <motion.div 
+                    key="total"
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.2, delay: 0.1 }}
+                    className="flex justify-between text-xl font-bold pt-2 border-t border-border"
+                  >
+                    <span>Total</span>
+                    <span className="text-accent">{formatPrice(finalTotal)}</span>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </>
+          )}
 
           {/* Auth status indicator */}
           {!isAuthenticated ? (
@@ -205,10 +293,12 @@ const Cart = () => {
 
           <button
             onClick={handleCheckout}
-            disabled={isProcessing}
+            disabled={isProcessing || isLoading}
             className="w-full py-4 bg-accent text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-accent/90 transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 shadow-glow"
           >
-            {isProcessing ? (
+            {isLoading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Chargement...</>
+            ) : isProcessing ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Traitement...</>
             ) : (
               <><ShoppingBag className="h-4 w-4" /> Passer ma commande</>

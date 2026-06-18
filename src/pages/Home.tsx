@@ -23,22 +23,30 @@ const steps = [
 
 const Home = () => {
   useReveal();
-  const { data: featuredProducts = [] } = useQuery({
+  const { data: featuredProducts = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ['featuredProducts'],
     queryFn: async () => {
       const { data, error } = await supabase.from('products').select('*').limit(8).order('created_at', { ascending: false });
       if (error) throw error;
       return data;
-    }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   });
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const { data, error } = await supabase.from('categories').select('*');
       if (error) throw error;
       return data;
-    }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   });
 
   return (
@@ -102,33 +110,42 @@ const Home = () => {
                 window.addEventListener("mouseup", onMouseUp);
               }}
             >
-              {categories.map((cat, i) => (
-                <motion.div
-                  key={cat.slug}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex-none"
-                >
-                  <Link 
-                    to={`/produits?category=${cat.slug}`}
-                    className="relative block w-[280px] md:w-[350px] overflow-hidden rounded-[2.5rem] aspect-[4/5] reveal snap-center shadow-card hover:shadow-elegant transition-all duration-500 bg-secondary group"
-                    style={{ transitionDelay: `${i * 100}ms` }}
-                  >
-                    <img 
-                      src={cat.image} 
-                      alt={cat.name} 
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 pointer-events-none"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none group-hover:from-black/95 transition-all duration-500" />
-                    <div className="absolute inset-x-0 bottom-0 p-8 text-white pointer-events-none">
-                      <h3 className="text-2xl font-serif mb-2 group-hover:translate-x-2 transition-transform duration-500">{cat.name}</h3>
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-accent font-bold flex items-center gap-2 group-hover:translate-x-2 transition-transform duration-500 [transition-delay:50ms]">
-                        Découvrir la collection <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                      </p>
+              {isLoadingCategories ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={`cat-skeleton-${i}`} className="flex-none">
+                    <div className="relative block w-[280px] md:w-[350px] overflow-hidden rounded-[2.5rem] aspect-[4/5] reveal snap-center bg-secondary/50 animate-pulse">
                     </div>
-                  </Link>
-                </motion.div>
-              ))}
+                  </div>
+                ))
+              ) : (
+                categories.map((cat, i) => (
+                  <motion.div
+                    key={cat.slug}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-none"
+                  >
+                    <Link 
+                      to={`/produits?category=${cat.slug}`}
+                      className="relative block w-[280px] md:w-[350px] overflow-hidden rounded-[2.5rem] aspect-[4/5] reveal snap-center shadow-card hover:shadow-elegant transition-all duration-500 bg-secondary group"
+                      style={{ transitionDelay: `${i * 100}ms` }}
+                    >
+                      <img 
+                        src={cat.image} 
+                        alt={cat.name} 
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 pointer-events-none"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none group-hover:from-black/95 transition-all duration-500" />
+                      <div className="absolute inset-x-0 bottom-0 p-8 text-white pointer-events-none">
+                        <h3 className="text-2xl font-serif mb-2 group-hover:translate-x-2 transition-transform duration-500">{cat.name}</h3>
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-accent font-bold flex items-center gap-2 group-hover:translate-x-2 transition-transform duration-500 [transition-delay:50ms]">
+                          Découvrir la collection <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                        </p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -167,7 +184,21 @@ const Home = () => {
               Voir toute la boutique <span className="w-12 h-[2px] bg-accent group-hover:bg-primary transition-all" />
             </Link>
           </div>
-          {featuredProducts.length > 0 ? (
+          {isLoadingProducts ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={`prod-skeleton-${i}`} className="reveal" style={{ transitionDelay: `${i * 150}ms` }}>
+                  <div className="bg-card rounded-[2rem] p-4 border border-border shadow-soft">
+                    <div className="bg-secondary/50 aspect-square rounded-[1.5rem] animate-pulse" />
+                    <div className="mt-4 space-y-2">
+                      <div className="h-4 bg-secondary/50 rounded w-3/4 animate-pulse" />
+                      <div className="h-4 bg-secondary/50 rounded w-1/2 animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : featuredProducts.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
               {featuredProducts.map((p, i) => (
                 <div key={p.id} className="reveal" style={{ transitionDelay: `${i * 150}ms` }}>

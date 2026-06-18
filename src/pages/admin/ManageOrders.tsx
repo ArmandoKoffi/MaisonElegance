@@ -95,7 +95,7 @@ const ManageOrders = () => {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher par nom, email, numéro..."
+            placeholder="Rechercher par nom, téléphone, numéro..."
             className="flex-1 outline-none text-sm bg-transparent"
           />
         </div>
@@ -161,7 +161,7 @@ const ManageOrders = () => {
                       {/* Customer Info */}
                       <div className="space-y-3">
                         <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Client</h3>
-                        <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-accent" />{order.customer_email}</div>
+                        <div className="flex items-center gap-2 text-sm font-semibold">{order.customer_name}</div>
                         <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-accent" />{order.customer_phone}</div>
                         <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4 text-accent" />{order.customer_address}</div>
                         <button

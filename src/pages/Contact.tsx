@@ -6,10 +6,10 @@ import { useReveal } from "@/hooks/useReveal";
 
 const faqs = [
   { q: "Comment passer commande sur Mimi Élégance ?", a: "C'est simple ! Explorez notre boutique en ligne, ajoutez vos articles au panier, puis validez votre panier. Vous serez redirigé vers WhatsApp avec le détail de votre sélection pour finaliser la livraison avec notre équipe." },
-  { q: "Quels sont les délais de livraison à Abidjan ?", a: "Pour Abidjan et les communes proches (Bingerville, Bassam, Songon), nous livrons sous 24 heures ouvrées après validation de votre commande." },
+  { q: "Quels sont les délais de livraison à Abidjan ?", a: "Pour Abidjan et ses quartiers, nous livrons sous 24 heures ouvrées après validation de votre commande." },
   { q: "Puis-je payer à la livraison ?", a: "Absolument. Nous proposons le paiement à la livraison à Abidjan pour que vous puissiez vérifier vos articles avant de payer. Nous acceptons aussi les paiements par Mobile Money." },
   { q: "Quels types d'articles proposez-vous ?", a: "Mimi Élégance est une boutique complète. Nous proposons des sacs à main, des vêtements tendance, des chaussures, des montres et divers accessoires de mode sélectionnés pour leur style et leur qualité." },
-  { q: "Combien coûte la livraison ?", a: "Abidjan / Bingerville : 1 500 FCFA. Bassam / Songon : 2 000 FCFA. Pour l'intérieur du pays, le tarif est fixé selon votre zone géographique (à confirmer avec nous sur WhatsApp)." },
+  { q: "Combien coûte la livraison ?", a: "Abidjan : entre 1500 et 2000 FCFA selon le quartier. Autres villes : entre 2500 et 3500 FCFA." },
   { q: "Est-il possible d'échanger un article ?", a: "En cas de défaut de fabrication ou de problème de taille sur les vêtements, un échange est possible sous 48h, à condition que l'article soit dans son emballage d'origine et non porté." },
 ];
 
@@ -76,8 +76,8 @@ const Contact = () => {
                   <MapPin className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-xl font-serif mb-1">Abidjan / Bingerville</p>
-                  <p className="text-white/60">1 500 FCFA — Livraison sous 24h</p>
+                  <p className="text-xl font-serif mb-1">Abidjan</p>
+                  <p className="text-white/60">1500 à 2000 FCFA — Livraison sous 24h</p>
                 </div>
               </div>
               <div className="flex gap-5 items-start">
@@ -85,17 +85,8 @@ const Contact = () => {
                   <MapPin className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-xl font-serif mb-1">Bassam / Songon</p>
-                  <p className="text-white/60">2 000 FCFA — Livraison sous 24h</p>
-                </div>
-              </div>
-              <div className="flex gap-5 items-start">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-5 h-5 text-accent" />
-                </div>
-                <div>
-                  <p className="text-xl font-serif mb-1">Intérieur du pays</p>
-                  <p className="text-white/60">Tarif fixé selon la zone — Expédition via transporteur</p>
+                  <p className="text-xl font-serif mb-1">Autres villes</p>
+                  <p className="text-white/60">2500 à 3500 FCFA — Livraison selon les jours ouvrés</p>
                 </div>
               </div>
             </div>

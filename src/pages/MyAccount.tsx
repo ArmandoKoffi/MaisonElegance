@@ -53,7 +53,7 @@ const MyAccount = () => {
     toast.success('Vous êtes déconnecté(e).');
   };
 
-  const totalSpent = orders.filter(o => o.status === 'paid' || o.status === 'delivered').reduce((sum, o) => sum + o.total_amount, 0);
+  const totalSpent = orders.reduce((sum, o) => sum + o.total_amount, 0);
 
   return (
     <div className="min-h-screen bg-mesh py-12 md:py-20">
@@ -95,19 +95,16 @@ const MyAccount = () => {
             <h2 className="font-serif text-xl mb-5">Mes informations</h2>
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-sm">
-                <Mail className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-muted-foreground">{currentUser?.email}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
                 <Phone className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-muted-foreground">{currentUser?.phone || '—'}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <span className="text-muted-foreground">{currentUser?.role ?? '—'}</span>
+                <span className="text-muted-foreground font-bold">{currentUser?.phone || '—'}</span>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <MapPin className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-muted-foreground">{currentUser?.address || '—'}, {currentUser?.city || '—'}</span>
+                <span className="text-muted-foreground">
+                  {!currentUser?.city ? "Retrait en magasin" : 
+                   currentUser?.city === "Abidjan" && currentUser?.address ? `${currentUser.address}, ${currentUser.city}` :
+                   currentUser?.city}
+                </span>
               </div>
             </div>
           </motion.div>

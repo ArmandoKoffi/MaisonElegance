@@ -26,22 +26,30 @@ const Products = () => {
     }
   }, [searchParams]);
 
-  const { data: products = [] } = useQuery({
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
       const { data, error } = await supabase.from('products').select('*');
       if (error) throw error;
       return data;
-    }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   });
 
-  const { data: rawCategories = [] } = useQuery({
+  const { data: rawCategories = [], isLoading: isLoadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const { data, error } = await supabase.from('categories').select('*');
       if (error) throw error;
       return data;
-    }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   });
   
   // Remove duplicate categories if they exist in the DB to prevent React key warnings
@@ -106,40 +114,48 @@ const Products = () => {
                   className="space-y-3 max-h-[400px] overflow-y-auto no-scrollbar pr-6 py-4"
                   onMouseLeave={() => setHoveredCategoryIndex(null)}
                 >
-                  {allCategoriesList.map((cat, index) => {
-                    const distance = hoveredCategoryIndex !== null ? Math.abs(hoveredCategoryIndex - index) : Infinity;
-                    const scale = hoveredCategoryIndex === null ? 1 : Math.max(1, 1.05 - distance * 0.02);
-                    const translateX = hoveredCategoryIndex === null ? 0 : Math.max(0, 8 - distance * 4);
-                    const opacity = hoveredCategoryIndex === null ? 1 : Math.max(0.6, 1 - distance * 0.15);
+                  {isLoadingCategories ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <div key={`cat-skeleton-${i}`} className="w-full text-left px-5 py-3 rounded-xl text-sm border bg-card border-border animate-pulse">
+                        <div className="h-4 bg-secondary/50 rounded w-3/4" />
+                      </div>
+                    ))
+                  ) : (
+                    allCategoriesList.map((cat, index) => {
+                      const distance = hoveredCategoryIndex !== null ? Math.abs(hoveredCategoryIndex - index) : Infinity;
+                      const scale = hoveredCategoryIndex === null ? 1 : Math.max(1, 1.05 - distance * 0.02);
+                      const translateX = hoveredCategoryIndex === null ? 0 : Math.max(0, 8 - distance * 4);
+                      const opacity = hoveredCategoryIndex === null ? 1 : Math.max(0.6, 1 - distance * 0.15);
 
-                    return (
-                      <button
-                        key={cat.slug}
-                        onMouseEnter={() => setHoveredCategoryIndex(index)}
-                        onClick={() => {
-                          setCategory(cat.slug);
-                          if (cat.slug === "all") {
-                            searchParams.delete("category");
-                          } else {
-                            searchParams.set("category", cat.slug);
-                          }
-                          setSearchParams(searchParams);
-                        }}
-                        className={cn(
-                          "w-full text-left px-5 py-3 rounded-xl text-sm border origin-left relative",
-                          category === cat.slug ? "bg-accent text-white border-accent shadow-glow" : "bg-card text-foreground/70 border-border"
-                        )}
-                        style={{
-                          transform: `scale(${scale}) translateX(${translateX}px)`,
-                          opacity: category === cat.slug ? 1 : opacity,
-                          transition: "all 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
-                          zIndex: hoveredCategoryIndex === index ? 10 : 1
-                        }}
-                      >
-                        {cat.name}
-                      </button>
-                    );
-                  })}
+                      return (
+                        <button
+                          key={cat.slug}
+                          onMouseEnter={() => setHoveredCategoryIndex(index)}
+                          onClick={() => {
+                            setCategory(cat.slug);
+                            if (cat.slug === "all") {
+                              searchParams.delete("category");
+                            } else {
+                              searchParams.set("category", cat.slug);
+                            }
+                            setSearchParams(searchParams);
+                          }}
+                          className={cn(
+                            "w-full text-left px-5 py-3 rounded-xl text-sm border origin-left relative",
+                            category === cat.slug ? "bg-accent text-white border-accent shadow-glow" : "bg-card text-foreground/70 border-border"
+                          )}
+                          style={{
+                            transform: `scale(${scale}) translateX(${translateX}px)`,
+                            opacity: category === cat.slug ? 1 : opacity,
+                            transition: "all 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
+                            zIndex: hoveredCategoryIndex === index ? 10 : 1
+                          }}
+                        >
+                          {cat.name}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
@@ -217,7 +233,40 @@ const Products = () => {
             </div>
 
             <AnimatePresence mode="wait">
-              {paginatedProducts.length > 0 ? (
+              {isLoadingProducts ? (
+                <motion.div
+                  key="products-skeleton"
+                  initial="hidden"
+                  animate="show"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    show: {
+                      opacity: 1,
+                      transition: { staggerChildren: 0.05 }
+                    }
+                  }}
+                >
+                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-8">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <motion.div 
+                        key={`prod-skeleton-${i}`}
+                        variants={{
+                          hidden: { opacity: 0, y: 30, scale: 0.95 },
+                          show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
+                        }}
+                      >
+                        <div className="bg-card rounded-[2rem] p-4 border border-border shadow-soft">
+                          <div className="bg-secondary/50 aspect-square rounded-[1.5rem] animate-pulse" />
+                          <div className="mt-4 space-y-2">
+                            <div className="h-4 bg-secondary/50 rounded w-3/4 animate-pulse" />
+                            <div className="h-4 bg-secondary/50 rounded w-1/2 animate-pulse" />
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              ) : paginatedProducts.length > 0 ? (
                 <motion.div
                   key={`products-grid-${category}-${gender}-${sort}-${search}-${currentPage}`}
                   initial="hidden"

@@ -8,7 +8,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (phone: string, pin: string) => Promise<{ success: boolean; error?: string }>;
   register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
@@ -16,11 +16,10 @@ interface AuthContextType {
 export interface RegisterData {
   firstName: string;
   lastName: string;
-  email: string;
   phone: string;
   address?: string;
   city?: string;
-  password: string;
+  pin: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,11 +72,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  // Helper to pad PIN to 6 chars for Supabase (add "cb" at end: 1234 → 1234cb)
+  const getSupabasePassword = (pin: string) => `${pin}cb`;
+
+  const login = useCallback(async (identifier: string, pin: string) => {
     try {
+      const email = identifier.includes('@') ? identifier : `${identifier.replace(/\+/g, '')}@chicbags.ci`;
+      const password = identifier.includes('@') ? pin : getSupabasePassword(pin);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        return { success: false, error: 'Identifiants incorrects.' };
+        return { success: false, error: identifier.includes('@') ? 'Identifiants incorrects.' : 'Identifiants incorrects (vérifiez votre numéro et code PIN).' };
       }
       return { success: true };
     } catch {
@@ -87,10 +91,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = useCallback(async (data: RegisterData) => {
     try {
+      const email = `${data.phone.replace(/\+/g, '')}@chicbags.ci`;
       // 1. Create auth user with all metadata so the trigger can use it
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
+        email: email,
+        password: getSupabasePassword(data.pin),
         options: {
           data: {
             first_name: data.firstName,
@@ -103,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (authError) {
         if (authError.message.includes('already registered')) {
-          return { success: false, error: 'Un compte existe déjà avec cet email.' };
+          return { success: false, error: 'Un compte existe déjà avec ce numéro de téléphone.' };
         }
         return { success: false, error: authError.message };
       }
