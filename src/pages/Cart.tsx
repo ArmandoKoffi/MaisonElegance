@@ -1,60 +1,199 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Trash2, Plus, Minus, MessageSquare, ShoppingBag, User, Loader2, Lock } from 'lucide-react';
+import { Trash2, Plus, Minus, MessageSquare, ShoppingBag, User, Loader2, Lock, ChevronDown, X } from 'lucide-react';
 import { formatPrice } from '@/data/products';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cities as villes, neighborhoodsAbidjan as adressesAbidjan } from '@/lib/shipping';
+import { cities as villes, neighborhoodsAbidjan as adressesAbidjan, getShippingCost, getShippingCostWithBreakdown } from '@/lib/shipping';
+import { cn } from '@/lib/utils';
 
 import { toast } from 'sonner';
 
 const WHATSAPP_NUMBER = '2250556126199';
 
-// Helper to get shipping cost
-const getShippingCost = (city: string | null | undefined, address: string | null | undefined): number => {
-  if (!city) return 0;
-  
-  const cityData = villes.find(v => v.name === city);
-  if (cityData && cityData.name === "Abidjan") {
-    const addressData = adressesAbidjan.find(a => a.name === address);
-    return addressData?.price || 0;
-  }
-  return cityData?.price || 0;
+interface CustomDropdownOption {
+  name: string;
+  price?: number | null;
+}
+
+interface CustomDropdownProps {
+  options: CustomDropdownOption[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  label: string;
+  required?: boolean;
+  name: string;
+}
+
+const CustomDropdown = ({ options, value, onChange, placeholder, label, required, name }: CustomDropdownProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+        {label}
+      </label>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between gap-3 px-5 py-3 bg-background border border-border rounded-xl text-sm font-bold shadow-soft hover:border-accent hover:shadow-md transition-all active:scale-95"
+        >
+          <span className={cn(!value && "text-muted-foreground")}>
+            {value || placeholder}
+          </span>
+          <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", isOpen && "rotate-180")} />
+        </button>
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.2, type: "spring" }}
+              className="absolute left-0 right-0 top-full mt-2 z-[100] bg-card border border-border rounded-2xl shadow-elegant overflow-hidden"
+            >
+              {options.map((option) => (
+                <button
+                  key={option.name}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.name);
+                    setIsOpen(false);
+                  }}
+                  className={cn(
+                    "w-full text-left px-6 py-4 text-sm transition-all duration-300 hover:pl-8 hover:pr-4 hover:bg-secondary relative overflow-hidden group/item flex justify-between",
+                    value === option.name ? "text-accent font-bold bg-accent/5" : "text-foreground/70"
+                  )}
+                >
+                  <span className={cn(
+                    "absolute left-0 top-0 bottom-0 w-1 bg-accent transition-all duration-300",
+                    value === option.name ? "opacity-100" : "opacity-0 -translate-x-full group-hover/item:opacity-100 group-hover/item:translate-x-0"
+                  )} />
+                  <span>{option.name}</span>
+                  {option.price !== undefined && option.price > 0 && (
+                    <span className="text-accent font-bold ml-2">{option.price.toLocaleString()} FCFA</span>
+                  )}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <input
+          type="hidden"
+          name={name}
+          value={value}
+          required={required}
+        />
+      </div>
+    </div>
+  );
 };
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
-  const { currentUser, isAuthenticated, isLoading } = useAuth();
+  const { currentUser, isAuthenticated, isLoading, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Calculate shipping cost
-  const shippingCost = getShippingCost(currentUser?.city, currentUser?.address);
-  const finalTotal = totalPrice + shippingCost;
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalStep, setModalStep] = useState<'confirm-existing' | 'change-address'>('confirm-existing');
   
-  const handleCheckout = async () => {
+  // Temporary address state for the modal
+  const [tempCity, setTempCity] = useState<string>("");
+  const [tempAddress, setTempAddress] = useState<string>("");
+  const [useTempAddress, setUseTempAddress] = useState(false);
+
+  // Calculate shipping cost
+  const activeCity = useTempAddress ? tempCity : currentUser?.city;
+  const activeAddress = useTempAddress ? tempAddress : currentUser?.address;
+  const shippingCost = getShippingCost(activeCity, activeAddress, totalPrice);
+  const shippingBreakdown = getShippingCostWithBreakdown(activeCity, activeAddress, totalPrice);
+  const finalTotal = totalPrice + shippingCost;
+
+  // Reset temp state when modal opens/closes
+  useEffect(() => {
+    if (isModalOpen) {
+      setModalStep('confirm-existing');
+      setTempCity("");
+      setTempAddress("");
+      setUseTempAddress(false);
+    }
+  }, [isModalOpen]);
+
+  const openModal = () => {
     if (!isAuthenticated) {
       toast.error('Veuillez vous connecter pour passer une commande.');
       navigate('/connexion', { state: { from: '/panier' } });
       return;
     }
+    setIsModalOpen(true);
+  };
 
-    if (!currentUser) return;
-    
-    // Check if we have shipping info if city selected
-    if (currentUser.city === "Abidjan" && !currentUser.address) {
+  const confirmExistingAddress = async () => {
+    setUseTempAddress(false);
+    await processCheckout();
+  };
+
+  const goToChangeAddress = () => {
+    setModalStep('change-address');
+    // Initialize temp state with current user data
+    setTempCity(currentUser?.city || "");
+    setTempAddress(currentUser?.address || "");
+    setUseTempAddress(true);
+  };
+
+  const confirmNewAddress = async () => {
+    if (tempCity === "Abidjan" && !tempAddress) {
       toast.error('Veuillez sélectionner un quartier pour la livraison à Abidjan.');
-      navigate('/connexion', { state: { from: '/panier' } });
       return;
     }
+    await processCheckout();
+  };
+
+  const cancelChangeAddress = () => {
+    setModalStep('confirm-existing');
+    setTempCity("");
+    setTempAddress("");
+    setUseTempAddress(false);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const processCheckout = async () => {
+    if (!currentUser) return;
+
+    const cityToUse = useTempAddress ? tempCity : currentUser.city;
+    const addressToUse = useTempAddress ? tempAddress : currentUser.address;
 
     setIsProcessing(true);
 
     try {
+      // Update user profile if using temp address
+      if (useTempAddress) {
+        await updateProfile({ city: cityToUse, address: addressToUse });
+      }
+
       const orderNumber = `CMD-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-      const isPickup = !currentUser.city;
+      const isPickup = !cityToUse;
 
       // Insert Order
       const { data: orderData, error: orderError } = await supabase.from('orders').insert({
@@ -63,7 +202,7 @@ const Cart = () => {
         customer_name: `${currentUser.first_name} ${currentUser.last_name}`,
         customer_email: currentUser.email,
         customer_phone: currentUser.phone || '',
-        customer_address: isPickup ? "Retrait en magasin" : `${currentUser.address || '—'}, ${currentUser.city || '—'}`,
+        customer_address: isPickup ? "Retrait en magasin" : `${addressToUse || '—'}, ${cityToUse || '—'}`,
         total_amount: finalTotal,
         status: 'pending'
       }).select('id').single();
@@ -93,13 +232,13 @@ const Cart = () => {
         ``,
         `👤 *Client :* ${currentUser.first_name} ${currentUser.last_name}`,
         `📞 *Téléphone :* ${currentUser.phone || 'Non renseigné'}`,
-        isPickup ? `🏪 *Mode :* RETRAIT EN MAGASIN` : `📍 *Adresse :* ${currentUser.address || '—'}, ${currentUser.city || '—'}`,
+        isPickup ? `🏪 *Mode :* RETRAIT EN MAGASIN` : `📍 *Adresse :* ${addressToUse || '—'}, ${cityToUse || '—'}`,
         ``,
         `🧭 *Articles commandés :*`,
         itemsText,
         ``,
         `💵 *Sous-total :* ${formatPrice(totalPrice)}`,
-        isPickup ? `🚚 *Frais de livraison :* GRATUIT` : `🚚 *${currentUser.city === "Abidjan" ? "Frais de livraison" : "Frais d'expédition"} :* ${formatPrice(shippingCost)}`,
+        isPickup ? `🚚 *Frais de livraison :* GRATUIT` : `🚚 *${cityToUse === "Abidjan" ? "Frais de livraison" : "Frais d'expédition"} :* ${formatPrice(shippingCost)}`,
         ``,
         `💰 *TOTAL : ${formatPrice(finalTotal)}*`,
         ``,
@@ -115,6 +254,7 @@ const Cart = () => {
 
       // Clear cart
       clearCart();
+      setIsModalOpen(false);
 
       // Show success to user — they don't know about WhatsApp
       toast.success(`Commande passée avec succès ! Vous serez contacté(e) très prochainement.`);
@@ -233,19 +373,32 @@ const Cart = () => {
 
                   {isAuthenticated && (
                     <>
-                      {currentUser?.city ? (
+                      {activeCity ? (
                         <motion.div
                           key="shipping"
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.3 }}
-                          className="flex justify-between text-sm overflow-hidden"
+                          className="space-y-2 overflow-hidden"
                         >
-                          <span className="text-muted-foreground">
-                            {currentUser.city === "Abidjan" ? "Frais de livraison" : "Frais d'expédition"}
-                          </span>
-                          <span className="font-semibold text-accent">{formatPrice(shippingCost)}</span>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {activeCity === "Abidjan" ? "Frais de livraison" : "Frais d'expédition"}
+                            </span>
+                            <span className="font-semibold text-accent">{formatPrice(shippingCost)}</span>
+                          </div>
+                          {activeCity !== "Abidjan" && (
+                            <div className="pl-4 text-xs text-muted-foreground space-y-1 border-l-2 border-accent/30">
+                              <p><strong>Livreur :</strong> {formatPrice(shippingBreakdown.livreur)}</p>
+                              <p><strong>Compagnie d'expédition :</strong> {formatPrice(shippingBreakdown.compagnie)}</p>
+                              <p className="pt-1">
+                                {totalPrice <= 10000 
+                                  ? "Calcul : 1500 FCFA + 1000 FCFA = 2500 FCFA"
+                                  : `Calcul : 1500 FCFA + 10% du sous-total = ${formatPrice(1500 + 0.1 * totalPrice)} FCFA`}
+                              </p>
+                            </div>
+                          )}
                         </motion.div>
                       ) : (
                         <motion.div
@@ -292,7 +445,7 @@ const Cart = () => {
           )}
 
           <button
-            onClick={handleCheckout}
+            onClick={openModal}
             disabled={isProcessing || isLoading}
             className="w-full py-4 bg-accent text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-accent/90 transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 shadow-glow"
           >
@@ -310,6 +463,215 @@ const Cart = () => {
           </p>
         </div>
       </div>
+
+      {/* MODAL */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={closeModal}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="relative bg-card border border-border rounded-[2rem] p-8 shadow-elegant w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                onClick={closeModal}
+                className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              <AnimatePresence mode="wait">
+                {modalStep === 'confirm-existing' ? (
+                  <motion.div
+                    key="confirm-existing"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <h2 className="font-serif text-3xl mb-6">Confirmer votre commande</h2>
+
+                    <div className="bg-secondary/30 rounded-xl p-5 mb-6">
+                      <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground mb-4">
+                        Votre mode de livraison
+                      </h3>
+                      {currentUser?.city ? (
+                        <div className="space-y-2">
+                          <p className="text-sm">
+                            <strong>Ville : </strong> {currentUser.city}
+                          </p>
+                          {currentUser.city === "Abidjan" && currentUser.address && (
+                            <p className="text-sm">
+                              <strong>Quartier : </strong> {currentUser.address}
+                            </p>
+                          )}
+                          <p className="text-sm font-bold text-accent">
+                            Frais : {formatPrice(shippingCost)}
+                          </p>
+                          {currentUser.city !== "Abidjan" && (
+                            <div className="pl-4 text-xs text-muted-foreground space-y-1 border-l-2 border-accent/30">
+                              <p><strong>Livreur :</strong> {formatPrice(shippingBreakdown.livreur)}</p>
+                              <p><strong>Compagnie d'expédition :</strong> {formatPrice(shippingBreakdown.compagnie)}</p>
+                              <p className="pt-1">
+                                {totalPrice <= 10000 
+                                  ? "Calcul : 1500 FCFA + 1000 FCFA = 2500 FCFA"
+                                  : `Calcul : 1500 FCFA + 10% du sous-total = ${formatPrice(1500 + 0.1 * totalPrice)} FCFA`}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-green-700 dark:text-green-400 font-bold">
+                          🏪 Retrait en magasin (gratuit)
+                        </p>
+                      )}
+                    </div>
+
+                    <p className="text-muted-foreground text-sm mb-8">
+                      Voulez-vous continuer avec cette adresse ?
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={goToChangeAddress}
+                        className="py-3 border border-border rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-secondary transition-all"
+                      >
+                        Non, changer
+                      </button>
+                      <button
+                        onClick={confirmExistingAddress}
+                        disabled={isProcessing}
+                        className="py-3 bg-accent text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-accent/90 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                      >
+                        {isProcessing ? (
+                          <><Loader2 className="h-4 w-4 animate-spin" /> Traitement...</>
+                        ) : 'Oui, confirmer'}
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="change-address"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <h2 className="font-serif text-3xl mb-6">Choisissez votre adresse de livraison</h2>
+
+                    <div className="space-y-5 mb-8">
+                      <CustomDropdown
+                        name="city"
+                        label="Ville"
+                        options={villes}
+                        value={tempCity}
+                        onChange={(val) => {
+                          setTempCity(val);
+                          if (val !== "Abidjan") {
+                            setTempAddress("");
+                          }
+                        }}
+                        placeholder="Sélectionnez une ville (ou laissez vide pour retrait en magasin)"
+                        required={false}
+                      />
+
+                      <AnimatePresence>
+                        {tempCity === "Abidjan" && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-visible"
+                          >
+                            <div className="pt-1">
+                              <CustomDropdown
+                                name="address"
+                                label="Quartier"
+                                options={adressesAbidjan}
+                                value={tempAddress}
+                                onChange={setTempAddress}
+                                placeholder="Sélectionnez un quartier"
+                                required={false}
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Recap of new shipping cost */}
+                      <div className="bg-accent/5 border border-accent/20 rounded-xl p-4">
+                        <h4 className="font-bold text-sm mb-2">Prévisualisation des frais</h4>
+                        {tempCity ? (
+                          <div className="space-y-2">
+                            {tempCity === "Abidjan" && tempAddress ? (
+                              <>
+                                <p className="text-sm">
+                                  Livraison à {tempAddress} : <strong className="text-accent">{formatPrice(getShippingCost(tempCity, tempAddress, totalPrice))}</strong>
+                                </p>
+                              </>
+                            ) : tempCity !== "Abidjan" ? (
+                              <>
+                                <p className="text-sm">
+                                  Expédition à {tempCity} : <strong className="text-accent">{formatPrice(getShippingCost(tempCity, tempAddress, totalPrice))}</strong>
+                                </p>
+                                <div className="pl-4 text-xs text-muted-foreground space-y-1 border-l-2 border-accent/30">
+                                  <p><strong>Livreur :</strong> {formatPrice(getShippingCostWithBreakdown(tempCity, tempAddress, totalPrice).livreur)}</p>
+                                  <p><strong>Compagnie d'expédition :</strong> {formatPrice(getShippingCostWithBreakdown(tempCity, tempAddress, totalPrice).compagnie)}</p>
+                                  <p className="pt-1">
+                                    {totalPrice <= 10000 
+                                      ? "Calcul : 1500 FCFA + 1000 FCFA = 2500 FCFA"
+                                      : `Calcul : 1500 FCFA + 10% du sous-total = ${formatPrice(1500 + 0.1 * totalPrice)} FCFA`}
+                                  </p>
+                                </div>
+                              </>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-green-700 dark:text-green-400 font-bold">
+                            🏪 Retrait en magasin (gratuit)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={cancelChangeAddress}
+                        className="py-3 border border-border rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-secondary transition-all"
+                      >
+                        Retour
+                      </button>
+                      <button
+                        onClick={confirmNewAddress}
+                        disabled={isProcessing}
+                        className="py-3 bg-accent text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-accent/90 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                      >
+                        {isProcessing ? (
+                          <><Loader2 className="h-4 w-4 animate-spin" /> Traitement...</>
+                        ) : 'Confirmer'}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { supabase, type Order, type OrderItem } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { formatPrice } from '@/data/products';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, ShoppingBag, Clock, CheckCircle, Truck, XCircle, 
-  Package, LogOut, ChevronDown, ChevronUp, MapPin, Phone, Mail
+  Package, LogOut, ChevronDown, ChevronUp, MapPin, Phone, Mail, Edit3, Save
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cities, neighborhoodsAbidjan } from '@/lib/shipping';
+import { CustomDropdown } from '@/components/ui/custom-dropdown';
 
 const statusConfig: Record<Order['status'], { label: string; color: string; icon: React.ElementType }> = {
   pending:   { label: 'En attente',  color: 'bg-yellow-100 text-yellow-800 border-yellow-200',  icon: Clock },
@@ -23,8 +25,14 @@ const statusConfig: Record<Order['status'], { label: string; color: string; icon
 type OrderWithItems = Order & { order_items: OrderItem[] };
 
 const MyAccount = () => {
-  const { currentUser, isAdmin, isAuthenticated, isLoading, logout, login, register } = useAuth();
+  const { currentUser, isAdmin, isAuthenticated, isLoading, logout, updateProfile } = useAuth();
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editCity, setEditCity] = useState<string>("");
+  const [editAddress, setEditAddress] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [editPanelAnimating, setEditPanelAnimating] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: orders = [] } = useQuery({
     queryKey: ['my-orders', currentUser?.id],
@@ -42,11 +50,86 @@ const MyAccount = () => {
     enabled: !!currentUser?.id
   });
 
+  // Real-time subscription for order status updates
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const channel = supabase
+      .channel('orders-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `user_id=eq.${currentUser.id}`
+        },
+        async (payload) => {
+          // Get the updated order with its items
+          const { data: updatedOrder, error } = await supabase
+            .from('orders')
+            .select('*, order_items(*)')
+            .eq('id', payload.new.id)
+            .single();
+
+          if (error) {
+            console.error('Error fetching updated order:', error);
+            return;
+          }
+
+          // Update the query cache
+          queryClient.setQueryData(['my-orders', currentUser.id], (oldOrders: OrderWithItems[]) => {
+            return oldOrders.map(order => 
+              order.id === updatedOrder.id ? updatedOrder : order
+            );
+          });
+
+          // Show toast notification
+          const statusLabel = statusConfig[updatedOrder.status as keyof typeof statusConfig].label;
+          toast.success(`Statut de commande mis à jour : ${updatedOrder.order_number} est ${statusLabel}`);
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id, queryClient]);
+
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center font-bold">Chargement...</div>;
   }
 
   if (!isAuthenticated) return <Navigate to="/connexion" state={{ from: '/mon-compte' }} replace />;
+
+  const handleEdit = () => {
+    setEditCity(currentUser?.city || "");
+    setEditAddress(currentUser?.address || "");
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    if (editCity === "Abidjan" && !editAddress) {
+      toast.error('Veuillez sélectionner un quartier pour Abidjan.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await updateProfile({ city: editCity, address: editCity === "Abidjan" ? editAddress : undefined });
+      setIsEditing(false);
+      toast.success('Adresse mise à jour avec succès !');
+    } catch (err) {
+      toast.error('Erreur lors de la mise à jour.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -84,30 +167,118 @@ const MyAccount = () => {
           </button>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
+        <div className="grid md:grid-cols-3 gap-6 mb-12 relative overflow-visible">
           {/* Info Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="md:col-span-2 bg-card border border-border rounded-[2rem] p-6 shadow-soft"
-          >
-            <h2 className="font-serif text-xl mb-5">Mes informations</h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm">
-                <Phone className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-muted-foreground font-bold">{currentUser?.phone || '—'}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <MapPin className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-muted-foreground">
-                  {!currentUser?.city ? "Retrait en magasin" : 
-                   currentUser?.city === "Abidjan" && currentUser?.address ? `${currentUser.address}, ${currentUser.city}` :
-                   currentUser?.city}
-                </span>
-              </div>
-            </div>
-          </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="md:col-span-2 bg-card border border-border rounded-[2rem] p-6 shadow-soft space-y-4 relative overflow-visible">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-serif text-xl">Mes informations</h2>
+            {!isEditing && (
+              <button
+                onClick={handleEdit}
+                className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent rounded-lg text-sm font-semibold hover:bg-accent/20 transition-colors">
+                <Edit3 className="w-4 h-4" />
+                Modifier
+              </button>
+            )}
+          </div>
+          
+          <AnimatePresence mode="wait">
+            {isEditing ? (
+              <motion.div
+                key="editing"
+                initial={{ opacity: 0, height: 0, y: -20 }}
+                animate={{ opacity: 1, height: "auto", y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -20 }}
+                transition={{ duration: 0.3, type: "spring", bounce: 0.25 }}
+                onAnimationStart={() => setEditPanelAnimating(true)}
+                onAnimationComplete={() => setEditPanelAnimating(false)}
+                className={`space-y-4 ${editPanelAnimating ? "overflow-hidden" : "overflow-visible"}`}>
+                <CustomDropdown
+                  name="city"
+                  label="Ville"
+                  options={[{ name: "Retrait en magasin", price: null }, ...cities]}
+                  value={editCity}
+                  onChange={(val) => {
+                    setEditCity(val === "Retrait en magasin" ? "" : val);
+                    if (val !== "Abidjan") {
+                      setEditAddress("");
+                    }
+                  }}
+                  placeholder="Sélectionnez une ville (ou retrait en magasin)"
+                  required={false}
+                />
+                
+                <AnimatePresence>
+                  {editCity === "Abidjan" && (
+                    <motion.div
+                      key="address"
+                      initial={{ opacity: 0, height: 0, y: -10 }}
+                      animate={{ opacity: 1, height: "auto", y: 0 }}
+                      exit={{ opacity: 0, height: 0, y: -10 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-visible">
+                      <CustomDropdown
+                        name="address"
+                        label="Quartier"
+                        options={neighborhoodsAbidjan}
+                        value={editAddress}
+                        onChange={setEditAddress}
+                        placeholder="Sélectionnez un quartier"
+                        required={false}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                    className="flex-1 px-4 py-2 border border-border rounded-xl text-sm font-semibold hover:bg-secondary/50 transition-colors">
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex-1 px-4 py-2 bg-accent text-white rounded-xl text-sm font-semibold hover:bg-accent/90 transition-colors flex items-center justify-center gap-2">
+                    {isSaving ? (
+                      <>Enregistrement...</>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" /> Enregistrer
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="viewing"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3, type: "spring", bounce: 0.25 }}
+                className="space-y-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <Phone className="w-4 h-4 text-accent shrink-0" />
+                  <span className="text-muted-foreground font-bold">{currentUser?.phone || '—'}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <MapPin className="w-4 h-4 text-accent shrink-0" />
+                  <span className="text-muted-foreground">
+                    {!currentUser?.city ? "Retrait en magasin" : 
+                     currentUser?.city === "Abidjan" && currentUser?.address ? `${currentUser.address}, ${currentUser.city}` :
+                     currentUser?.city}
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
           {/* Stats Card */}
           <motion.div

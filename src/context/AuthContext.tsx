@@ -11,6 +11,7 @@ interface AuthContextType {
   login: (phone: string, pin: string) => Promise<{ success: boolean; error?: string }>;
   register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  updateProfile: (data: Partial<Pick<DbUser, 'address' | 'city'>>) => Promise<void>;
 }
 
 export interface RegisterData {
@@ -138,6 +139,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
+  const updateProfile = useCallback(async (data: Partial<Pick<DbUser, 'address' | 'city'>>) => {
+    if (!currentUser) return;
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          address: data.address !== undefined ? data.address : null,
+          city: data.city !== undefined ? data.city : null,
+        })
+        .eq('id', currentUser.id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setCurrentUser(prev => prev ? { ...prev, ...data } : null);
+    } catch (err) {
+      console.error('Erreur mise à jour profil:', err);
+      throw err;
+    }
+  }, [currentUser]);
+
   return (
     <AuthContext.Provider value={{
       currentUser,
@@ -147,6 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login,
       register,
       logout,
+      updateProfile,
     }}>
       {children}
     </AuthContext.Provider>

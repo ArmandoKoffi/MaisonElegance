@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase, type Order, type OrderItem } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatPrice } from '@/data/products';
@@ -39,6 +39,67 @@ const ManageOrders = () => {
       return data as OrderWithItems[];
     }
   });
+
+  // Real-time subscription for admin orders
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-orders-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // Get the new order with its items
+            const { data: newOrder, error } = await supabase
+              .from('orders')
+              .select('*, order_items(*)')
+              .eq('id', payload.new.id)
+              .single();
+
+            if (error) {
+              console.error('Error fetching new order:', error);
+              return;
+            }
+
+            // Update the query cache
+            queryClient.setQueryData(['admin_orders'], (oldOrders: OrderWithItems[]) => {
+              return [newOrder, ...oldOrders];
+            });
+
+            toast.success(`Nouvelle commande : ${newOrder.order_number}`);
+          } else if (payload.eventType === 'UPDATE') {
+            // Get the updated order with its items
+            const { data: updatedOrder, error } = await supabase
+              .from('orders')
+              .select('*, order_items(*)')
+              .eq('id', payload.new.id)
+              .single();
+
+            if (error) {
+              console.error('Error fetching updated order:', error);
+              return;
+            }
+
+            // Update the query cache
+            queryClient.setQueryData(['admin_orders'], (oldOrders: OrderWithItems[]) => {
+              return oldOrders.map(order => 
+                order.id === updatedOrder.id ? updatedOrder : order
+              );
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<Order['status'] | 'all'>('all');
