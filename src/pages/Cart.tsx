@@ -6,7 +6,7 @@ import { Trash2, Plus, Minus, MessageSquare, ShoppingBag, User, Loader2, Lock, C
 import { formatPrice } from '@/data/products';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cities as villes, neighborhoodsAbidjan as adressesAbidjan, getShippingCost, getShippingCostWithBreakdown } from '@/lib/shipping';
+import { cities as villes, neighborhoodsAbidjan as adressesAbidjan, getShippingCost, getShippingCostWithBreakdown, capitalizeWords } from '@/lib/shipping';
 import { cn } from '@/lib/utils';
 
 import { toast } from 'sonner';
@@ -107,7 +107,7 @@ const CustomDropdown = ({ options, value, onChange, placeholder, label, required
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
-  const { currentUser, isAuthenticated, isLoading, updateProfile } = useAuth();
+  const { currentUser, isAuthenticated, isLoading, checkPhoneUniqueness } = useAuth();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -118,11 +118,21 @@ const Cart = () => {
   // Temporary address state for the modal
   const [tempCity, setTempCity] = useState<string>("");
   const [tempAddress, setTempAddress] = useState<string>("");
+  const [tempOtherCityAddress, setTempOtherCityAddress] = useState<string>("");
+  const [tempPhone, setTempPhone] = useState<string>("");
   const [useTempAddress, setUseTempAddress] = useState(false);
 
   // Calculate shipping cost
-  const activeCity = useTempAddress ? tempCity : currentUser?.city;
-  const activeAddress = useTempAddress ? tempAddress : currentUser?.address;
+  let activeCity = useTempAddress ? tempCity : currentUser?.city;
+  let activeAddress = useTempAddress ? tempAddress : currentUser?.address;
+  
+  // Handle the case where tempCity is "Autre ville"
+  if (useTempAddress && tempCity === "Autre ville" && tempOtherCityAddress) {
+    activeCity = tempOtherCityAddress;
+    activeAddress = tempOtherCityAddress;
+  }
+  
+  const activePhone = useTempAddress ? tempPhone : currentUser?.phone;
   const shippingCost = getShippingCost(activeCity, activeAddress, totalPrice);
   const shippingBreakdown = getShippingCostWithBreakdown(activeCity, activeAddress, totalPrice);
   const finalTotal = totalPrice + shippingCost;
@@ -133,6 +143,7 @@ const Cart = () => {
       setModalStep('confirm-existing');
       setTempCity("");
       setTempAddress("");
+      setTempOtherCityAddress("");
       setUseTempAddress(false);
     }
   }, [isModalOpen]);
@@ -154,8 +165,21 @@ const Cart = () => {
   const goToChangeAddress = () => {
     setModalStep('change-address');
     // Initialize temp state with current user data
-    setTempCity(currentUser?.city || "");
-    setTempAddress(currentUser?.address || "");
+    const userCity = currentUser?.city || "";
+    if (userCity && userCity.toLowerCase() === "abidjan") {
+      setTempCity("Abidjan");
+      setTempAddress(currentUser?.address || "");
+      setTempOtherCityAddress("");
+    } else if (userCity) {
+      setTempCity("Autre ville");
+      setTempAddress("");
+      setTempOtherCityAddress(userCity);
+    } else {
+      setTempCity("");
+      setTempAddress("");
+      setTempOtherCityAddress("");
+    }
+    setTempPhone(currentUser?.phone || "");
     setUseTempAddress(true);
   };
 
@@ -164,6 +188,28 @@ const Cart = () => {
       toast.error('Veuillez sélectionner un quartier pour la livraison à Abidjan.');
       return;
     }
+    if (tempCity === "Autre ville" && !tempOtherCityAddress) {
+      toast.error('Veuillez saisir le nom de votre ville.');
+      return;
+    }
+    if (!tempPhone) {
+      toast.error('Veuillez renseigner un numéro de téléphone.');
+      return;
+    }
+
+    // Vérifier l'unicité du numéro de téléphone si modifié
+    if (tempPhone !== currentUser?.phone) {
+      const { isAvailable, error } = await checkPhoneUniqueness(tempPhone, currentUser?.id);
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      if (!isAvailable) {
+        toast.error('Ce numéro de téléphone est déjà utilisé par un autre compte. Veuillez l\'utiliser pour vous connecter.');
+        return;
+      }
+    }
+
     await processCheckout();
   };
 
@@ -171,6 +217,8 @@ const Cart = () => {
     setModalStep('confirm-existing');
     setTempCity("");
     setTempAddress("");
+    setTempOtherCityAddress("");
+    setTempPhone("");
     setUseTempAddress(false);
   };
 
@@ -181,19 +229,33 @@ const Cart = () => {
   const processCheckout = async () => {
     if (!currentUser) return;
 
-    const cityToUse = useTempAddress ? tempCity : currentUser.city;
-    const addressToUse = useTempAddress ? tempAddress : currentUser.address;
+    let cityToUse = useTempAddress ? tempCity : currentUser.city;
+    let addressToUse = useTempAddress ? tempAddress : currentUser.address;
+    
+    // Handle "Autre ville" case
+    if (useTempAddress && tempCity === "Autre ville" && tempOtherCityAddress) {
+      const capitalized = capitalizeWords(tempOtherCityAddress);
+      cityToUse = capitalized;
+      addressToUse = capitalized;
+    }
+    
+    const phoneToUse = useTempAddress ? tempPhone : currentUser.phone;
 
     setIsProcessing(true);
 
     try {
-      // Update user profile if using temp address
-      if (useTempAddress) {
-        await updateProfile({ city: cityToUse, address: addressToUse });
-      }
-
       const orderNumber = `CMD-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       const isPickup = !cityToUse;
+      
+      // Formater l'adresse correctement
+      let formattedAddress = "";
+      if (isPickup) {
+        formattedAddress = "Retrait en magasin";
+      } else if (addressToUse === cityToUse) {
+        formattedAddress = addressToUse || '—';
+      } else {
+        formattedAddress = `${addressToUse || '—'}, ${cityToUse || '—'}`;
+      }
 
       // Insert Order
       const { data: orderData, error: orderError } = await supabase.from('orders').insert({
@@ -201,8 +263,8 @@ const Cart = () => {
         user_id: currentUser.id!,
         customer_name: `${currentUser.first_name} ${currentUser.last_name}`,
         customer_email: currentUser.email,
-        customer_phone: currentUser.phone || '',
-        customer_address: isPickup ? "Retrait en magasin" : `${addressToUse || '—'}, ${cityToUse || '—'}`,
+        customer_phone: phoneToUse || '',
+        customer_address: formattedAddress,
         total_amount: finalTotal,
         status: 'pending'
       }).select('id').single();
@@ -228,21 +290,21 @@ const Cart = () => {
       ).join('\n');
 
       const message = [
-        `🛍️ *Nouvelle commande — ${orderNumber}*`,
+        `*Nouvelle commande — ${orderNumber}*`,
         ``,
-        `👤 *Client :* ${currentUser.first_name} ${currentUser.last_name}`,
-        `📞 *Téléphone :* ${currentUser.phone || 'Non renseigné'}`,
-        isPickup ? `🏪 *Mode :* RETRAIT EN MAGASIN` : `📍 *Adresse :* ${addressToUse || '—'}, ${cityToUse || '—'}`,
+        `*Client :* ${currentUser.first_name} ${currentUser.last_name}`,
+        `*Téléphone :* ${phoneToUse || 'Non renseigné'}`,
+        isPickup ? `*Mode :* RETRAIT EN MAGASIN` : `*Adresse :* ${formattedAddress}`,
         ``,
-        `🧭 *Articles commandés :*`,
+        `*Articles commandés :*`,
         itemsText,
         ``,
-        `💵 *Sous-total :* ${formatPrice(totalPrice)}`,
-        isPickup ? `🚚 *Frais de livraison :* GRATUIT` : `🚚 *${cityToUse === "Abidjan" ? "Frais de livraison" : "Frais d'expédition"} :* ${formatPrice(shippingCost)}`,
+        `*Sous-total :* ${formatPrice(totalPrice)}`,
+        isPickup ? `*Frais de livraison :* GRATUIT` : `*${cityToUse === "Abidjan" ? "Frais de livraison" : "Frais d'expédition"} :* ${formatPrice(shippingCost)}`,
         ``,
-        `💰 *TOTAL : ${formatPrice(finalTotal)}*`,
+        `*TOTAL : ${formatPrice(finalTotal)}*`,
         ``,
-        `⏰ Date : ${new Date().toLocaleString('fr-FR')}`,
+        `Date : ${new Date().toLocaleString('fr-FR')}`,
       ].join('\n');
 
       // Send notification to admin silently (user never sees this happen)
@@ -506,38 +568,43 @@ const Cart = () => {
 
                     <div className="bg-secondary/30 rounded-xl p-5 mb-6">
                       <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground mb-4">
-                        Votre mode de livraison
+                        Vos coordonnées de livraison
                       </h3>
-                      {currentUser?.city ? (
-                        <div className="space-y-2">
-                          <p className="text-sm">
-                            <strong>Ville : </strong> {currentUser.city}
-                          </p>
-                          {currentUser.city === "Abidjan" && currentUser.address && (
-                            <p className="text-sm">
-                              <strong>Quartier : </strong> {currentUser.address}
-                            </p>
-                          )}
-                          <p className="text-sm font-bold text-accent">
-                            Frais : {formatPrice(shippingCost)}
-                          </p>
-                          {currentUser.city !== "Abidjan" && (
-                            <div className="pl-4 text-xs text-muted-foreground space-y-1 border-l-2 border-accent/30">
-                              <p><strong>Livreur :</strong> {formatPrice(shippingBreakdown.livreur)}</p>
-                              <p><strong>Compagnie d'expédition :</strong> {formatPrice(shippingBreakdown.compagnie)}</p>
-                              <p className="pt-1">
-                                {totalPrice <= 10000 
-                                  ? "Calcul : 1500 FCFA + 1000 FCFA = 2500 FCFA"
-                                  : `Calcul : 1500 FCFA + 10% du sous-total = ${formatPrice(1500 + 0.1 * totalPrice)} FCFA`}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-green-700 dark:text-green-400 font-bold">
-                          🏪 Retrait en magasin (gratuit)
+                      <div className="space-y-2">
+                        <p className="text-sm">
+                          <strong>Téléphone : </strong> {currentUser?.phone || 'Non renseigné'}
                         </p>
-                      )}
+                        {currentUser?.city ? (
+                          <>
+                            <p className="text-sm">
+                              <strong>Ville : </strong> {currentUser.city}
+                            </p>
+                            {currentUser.city === "Abidjan" && currentUser.address && (
+                              <p className="text-sm">
+                                <strong>Quartier : </strong> {currentUser.address}
+                              </p>
+                            )}
+                            <p className="text-sm font-bold text-accent">
+                              Frais : {formatPrice(shippingCost)}
+                            </p>
+                            {currentUser.city !== "Abidjan" && (
+                              <div className="pl-4 text-xs text-muted-foreground space-y-1 border-l-2 border-accent/30">
+                                <p><strong>Livreur :</strong> {formatPrice(shippingBreakdown.livreur)}</p>
+                                <p><strong>Compagnie d'expédition :</strong> {formatPrice(shippingBreakdown.compagnie)}</p>
+                                <p className="pt-1">
+                                  {totalPrice <= 10000 
+                                    ? "Calcul : 1500 FCFA + 1000 FCFA = 2500 FCFA"
+                                    : `Calcul : 1500 FCFA + 10% du sous-total = ${formatPrice(1500 + 0.1 * totalPrice)} FCFA`}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-sm text-green-700 dark:text-green-400 font-bold">
+                            🏪 Retrait en magasin (gratuit)
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <p className="text-muted-foreground text-sm mb-8">
@@ -573,6 +640,24 @@ const Cart = () => {
                     <h2 className="font-serif text-3xl mb-6">Choisissez votre adresse de livraison</h2>
 
                     <div className="space-y-5 mb-8">
+                      <div className="space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                          Numéro de téléphone
+                        </label>
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <input
+                            type="tel"
+                            value={tempPhone}
+                            onChange={(e) => setTempPhone(e.target.value.replace(/[^\d+]/g, ''))}
+                            onInput={(e) => e.currentTarget.value = e.currentTarget.value.replace(/[^\d+]/g, '')}
+                            placeholder="Ex: 0707070707"
+                            maxLength={15}
+                            className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-sm font-bold shadow-soft focus:border-accent transition-all outline-none"
+                          />
+                        </div>
+                      </div>
+
                       <CustomDropdown
                         name="city"
                         label="Ville"
@@ -610,6 +695,32 @@ const Cart = () => {
                             </div>
                           </motion.div>
                         )}
+                        {tempCity === "Autre ville" && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-visible"
+                          >
+                            <div className="pt-4 space-y-2">
+                              <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                                Votre ville
+                              </label>
+                              <div className="relative">
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <input
+                                  type="text"
+                                  value={tempOtherCityAddress}
+                                  onChange={(e) => setTempOtherCityAddress(e.target.value)}
+                                  onBlur={(e) => setTempOtherCityAddress(capitalizeWords(e.target.value))}
+                                  placeholder="Ex: San Pédro"
+                                  className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-sm font-bold shadow-soft focus:border-accent transition-all outline-none"
+                                />
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
                       </AnimatePresence>
 
                       {/* Recap of new shipping cost */}
@@ -623,7 +734,22 @@ const Cart = () => {
                                   Livraison à {tempAddress} : <strong className="text-accent">{formatPrice(getShippingCost(tempCity, tempAddress, totalPrice))}</strong>
                                 </p>
                               </>
-                            ) : tempCity !== "Abidjan" ? (
+                            ) : tempCity === "Autre ville" && tempOtherCityAddress ? (
+                              <>
+                                <p className="text-sm">
+                                  Expédition à {tempOtherCityAddress} : <strong className="text-accent">{formatPrice(getShippingCost(tempOtherCityAddress, tempOtherCityAddress, totalPrice))}</strong>
+                                </p>
+                                <div className="pl-4 text-xs text-muted-foreground space-y-1 border-l-2 border-accent/30">
+                                  <p><strong>Livreur :</strong> {formatPrice(getShippingCostWithBreakdown(tempOtherCityAddress, tempOtherCityAddress, totalPrice).livreur)}</p>
+                                  <p><strong>Compagnie d'expédition :</strong> {formatPrice(getShippingCostWithBreakdown(tempOtherCityAddress, tempOtherCityAddress, totalPrice).compagnie)}</p>
+                                  <p className="pt-1">
+                                    {totalPrice <= 10000 
+                                      ? "Calcul : 1500 FCFA + 1000 FCFA = 2500 FCFA"
+                                      : `Calcul : 1500 FCFA + 10% du sous-total = ${formatPrice(1500 + 0.1 * totalPrice)} FCFA`}
+                                  </p>
+                                </div>
+                              </>
+                            ) : tempCity !== "Abidjan" && tempCity !== "Autre ville" ? (
                               <>
                                 <p className="text-sm">
                                   Expédition à {tempCity} : <strong className="text-accent">{formatPrice(getShippingCost(tempCity, tempAddress, totalPrice))}</strong>

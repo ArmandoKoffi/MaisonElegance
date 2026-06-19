@@ -1,10 +1,23 @@
+// Helper function to capitalize words (first letter uppercase, rest lowercase)
+// Handles both spaces and hyphens
+export const capitalizeWords = (text: string): string => {
+  return text
+    .trim()
+    .split(/(\s+|-)/) // Split on spaces and hyphens, keep the separators
+    .map((part, index) => {
+      if (part.trim() === '' || part === ' ' || part === '-') {
+        return part;
+      }
+      // Capitalize each part
+      return part[0].toUpperCase() + part.slice(1).toLowerCase();
+    })
+    .join('');
+};
+
 // Shared shipping price data
 export const cities = [
   { name: "Abidjan", price: null },
-  { name: "San-Pédro", price: null },
-  { name: "Bouaké", price: null },
-  { name: "Yamoussoukro", price: null },
-  { name: "Korhogo", price: null }
+  { name: "Autre ville", price: null }
 ];
 
 export const neighborhoodsAbidjan = [
@@ -63,9 +76,7 @@ export const getShippingCostWithBreakdown = (city: string | null | undefined, ad
   // Normalized city name for comparison
   const normalizedCity = city.trim();
   
-  const cityData = cities.find(v => v.name.toLowerCase() === normalizedCity.toLowerCase());
-  
-  if (cityData && cityData.name === "Abidjan") {
+  if (normalizedCity.toLowerCase() === "abidjan") {
     if (!address) {
       return { livreur: 0, compagnie: 0, total: 0 };
     }
@@ -79,8 +90,8 @@ export const getShippingCostWithBreakdown = (city: string | null | undefined, ad
     const total = addressData?.price || 0;
     // For Abidjan, we can consider the full amount goes to the livreur for simplicity
     return { livreur: total, compagnie: 0, total };
-  } else if (cityData) {
-    // For cities outside Abidjan, apply dynamic calculation
+  } else if (normalizedCity.toLowerCase() !== "autre ville") {
+    // For any city outside Abidjan, apply dynamic calculation
     const livreur = 1500;
     let compagnie: number;
     if (subtotal <= 10000) {

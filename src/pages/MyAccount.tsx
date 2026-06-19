@@ -10,7 +10,7 @@ import {
   Package, LogOut, ChevronDown, ChevronUp, MapPin, Phone, Mail, Edit3, Save
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cities, neighborhoodsAbidjan } from '@/lib/shipping';
+import { cities, neighborhoodsAbidjan, capitalizeWords } from '@/lib/shipping';
 import { CustomDropdown } from '@/components/ui/custom-dropdown';
 
 const statusConfig: Record<Order['status'], { label: string; color: string; icon: React.ElementType }> = {
@@ -30,9 +30,14 @@ const MyAccount = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editCity, setEditCity] = useState<string>("");
   const [editAddress, setEditAddress] = useState<string>("");
+  const [editOtherCityAddress, setEditOtherCityAddress] = useState<string>("");
+  const [editPhone, setEditPhone] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [editPanelAnimating, setEditPanelAnimating] = useState(false);
   const queryClient = useQueryClient();
+
+  // Extract login phone number from the email
+  const loginPhoneNumber = currentUser?.email ? currentUser.email.split('@')[0] : '';
 
   const { data: orders = [] } = useQuery({
     queryKey: ['my-orders', currentUser?.id],
@@ -104,8 +109,21 @@ const MyAccount = () => {
   if (!isAuthenticated) return <Navigate to="/connexion" state={{ from: '/mon-compte' }} replace />;
 
   const handleEdit = () => {
-    setEditCity(currentUser?.city || "");
-    setEditAddress(currentUser?.address || "");
+    const userCity = currentUser?.city || "";
+    if (userCity && userCity.toLowerCase() === "abidjan") {
+      setEditCity("Abidjan");
+      setEditAddress(currentUser?.address || "");
+      setEditOtherCityAddress("");
+    } else if (userCity) {
+      setEditCity("Autre ville");
+      setEditAddress("");
+      setEditOtherCityAddress(userCity);
+    } else {
+      setEditCity("");
+      setEditAddress("");
+      setEditOtherCityAddress("");
+    }
+    setEditPhone(currentUser?.phone || "");
     setIsEditing(true);
   };
 
@@ -114,16 +132,52 @@ const MyAccount = () => {
   };
 
   const handleSave = async () => {
-    if (editCity === "Abidjan" && !editAddress) {
-      toast.error('Veuillez sélectionner un quartier pour Abidjan.');
+    let finalCity = "";
+    let finalAddress = "";
+
+    if (editCity === "Abidjan") {
+      if (!editAddress) {
+        toast.error('Veuillez sélectionner la commune pour Abidjan.');
+        return;
+      }
+      finalCity = "Abidjan";
+      finalAddress = editAddress;
+    } else if (editCity === "Autre ville") {
+      if (!editOtherCityAddress) {
+        toast.error('Veuillez saisir le nom de votre ville.');
+        return;
+      }
+      const capitalizedCity = capitalizeWords(editOtherCityAddress);
+      finalCity = capitalizedCity;
+      finalAddress = capitalizedCity;
+    }
+
+    if (!editPhone) {
+      toast.error('Veuillez renseigner un numéro de téléphone.');
       return;
     }
 
     setIsSaving(true);
     try {
-      await updateProfile({ city: editCity, address: editCity === "Abidjan" ? editAddress : undefined });
-      setIsEditing(false);
-      toast.success('Adresse mise à jour avec succès !');
+      const result = await updateProfile({ 
+        city: finalCity, 
+        address: finalAddress,
+        phone: editPhone
+      });
+
+      if (result.success) {
+        setIsEditing(false);
+        toast.success(
+          <div className="space-y-1">
+            <p className="font-bold">Profil mis à jour avec succès !</p>
+            <p className="text-xs">
+              Rappel : Pour vous connecter, utilisez toujours votre numéro initial : <span className="font-bold">{loginPhoneNumber}</span>
+            </p>
+          </div>
+        );
+      } else {
+        toast.error(result.error);
+      }
     } catch (err) {
       toast.error('Erreur lors de la mise à jour.');
     } finally {
@@ -197,6 +251,48 @@ const MyAccount = () => {
                 onAnimationStart={() => setEditPanelAnimating(true)}
                 onAnimationComplete={() => setEditPanelAnimating(false)}
                 className={`space-y-4 ${editPanelAnimating ? "overflow-hidden" : "overflow-visible"}`}>
+                
+                {/* Important message about login phone number */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shrink-0">
+                      <Phone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-bold text-blue-900 dark:text-blue-100">
+                        Information importante
+                      </h4>
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        <span className="font-bold block mb-1">
+                          Numéro de connexion (IMMUTABLE) : {loginPhoneNumber}
+                        </span>
+                        C'est le numéro que vous devrez <span className="font-bold">toujours utiliser pour vous connecter</span> à votre compte. Il ne peut pas être modifié.
+                      </p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        <span className="font-bold">Numéro de contact :</span> Le numéro que vous allez saisir ci-dessous sera utilisé par notre service client pour vous contacter au sujet de vos commandes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                    Numéro de téléphone (contact)
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="tel"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value.replace(/[^\d+]/g, ''))}
+                      onInput={(e) => e.currentTarget.value = e.currentTarget.value.replace(/[^\d+]/g, '')}
+                      placeholder="Ex: 0707070707"
+                      maxLength={15}
+                      className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-xl text-sm font-bold shadow-soft focus:border-accent transition-all outline-none"
+                    />
+                  </div>
+                </div>
+
                 <CustomDropdown
                   name="city"
                   label="Ville"
@@ -227,9 +323,31 @@ const MyAccount = () => {
                         options={neighborhoodsAbidjan}
                         value={editAddress}
                         onChange={setEditAddress}
-                        placeholder="Sélectionnez un quartier"
+                        placeholder="Sélectionnez la commune"
                         required={false}
                       />
+                    </motion.div>
+                  )}
+                  {editCity === "Autre ville" && (
+                    <motion.div
+                      key="other-city"
+                      initial={{ opacity: 0, height: 0, y: -10 }}
+                      animate={{ opacity: 1, height: "auto", y: 0 }}
+                      exit={{ opacity: 0, height: 0, y: -10 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-visible pt-4 space-y-2">
+                      <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">Votre ville</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={editOtherCityAddress}
+                          onChange={(e) => setEditOtherCityAddress(e.target.value)}
+                          onBlur={(e) => setEditOtherCityAddress(capitalizeWords(e.target.value))}
+                          placeholder="Ex: San Pédro"
+                          className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-xl text-sm font-bold shadow-soft focus:border-accent transition-all outline-none"
+                        />
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>

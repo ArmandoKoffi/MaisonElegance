@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, LogIn, UserPlus, ShoppingBag } from 'lucide-react';
+import { Eye, EyeOff, LogIn, UserPlus, ShoppingBag, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
-import { cities as villes, neighborhoodsAbidjan as adressesAbidjan } from '@/lib/shipping';
+import { cities as villes, neighborhoodsAbidjan as adressesAbidjan, capitalizeWords } from '@/lib/shipping';
 import { CustomDropdown } from '@/components/ui/custom-dropdown';
 
 const AuthPage = () => {
@@ -13,6 +13,7 @@ const AuthPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [selectedAddress, setSelectedAddress] = useState<string>("");
+  const [otherCityAddress, setOtherCityAddress] = useState<string>("");
   const { login, register, isAuthenticated, isAdmin, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,9 +50,13 @@ const AuthPage = () => {
     const pin = fd.get('pin') as string;
     const confirmPin = fd.get('confirmPin') as string;
     
-    const firstName = (fd.get('firstName') as string).trim();
-    const lastName = (fd.get('lastName') as string).trim();
+    let firstName = (fd.get('firstName') as string).trim();
+    let lastName = (fd.get('lastName') as string).trim();
     const phone = (fd.get('phone') as string).trim();
+    
+    // Capitalize first and last name
+    firstName = capitalizeWords(firstName);
+    lastName = capitalizeWords(lastName);
 
     if (!firstName || !lastName || !phone || !pin) {
       toast.error('Veuillez remplir tous les champs obligatoires.');
@@ -59,8 +64,30 @@ const AuthPage = () => {
       return;
     }
 
-    if (selectedCity === "Abidjan" && !selectedAddress) {
-      toast.error('Veuillez sélectionner un quartier pour Abidjan.');
+    let finalAddress = "";
+    let finalCity = "";
+
+    if (selectedCity === "Abidjan") {
+      if (!selectedAddress) {
+        toast.error('Veuillez sélectionner un quartier pour Abidjan.');
+        setIsLoading(false);
+        return;
+      }
+      finalCity = "Abidjan";
+      finalAddress = selectedAddress;
+    } else if (selectedCity === "Autre ville") {
+      if (!otherCityAddress) {
+        toast.error('Veuillez saisir le nom de votre ville.');
+        setIsLoading(false);
+        return;
+      }
+      const capitalizedOtherCity = capitalizeWords(otherCityAddress);
+      finalCity = capitalizedOtherCity;
+      finalAddress = capitalizedOtherCity;
+    }
+
+    if (selectedCity && !finalCity) {
+      toast.error('Veuillez remplir votre adresse.');
       setIsLoading(false);
       return;
     }
@@ -80,8 +107,8 @@ const AuthPage = () => {
       firstName,
       lastName,
       phone,
-      address: selectedAddress,
-      city: selectedCity,
+      address: finalAddress,
+      city: finalCity,
       pin,
     });
     setIsLoading(false);
@@ -281,6 +308,30 @@ const AuthPage = () => {
                             placeholder="Sélectionnez un quartier"
                             required={false}
                           />
+                        </div>
+                      </motion.div>
+                    )}
+                    {selectedCity === "Autre ville" && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10, height: 0 }}
+                        animate={{ opacity: 1, y: 0, height: "auto" }}
+                        exit={{ opacity: 0, y: -10, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-visible"
+                      >
+                        <div className="pt-4 space-y-2">
+                          <label className={labelClass}>Votre ville</label>
+                          <div className="relative">
+                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <input
+                              type="text"
+                              value={otherCityAddress}
+                              onChange={(e) => setOtherCityAddress(e.target.value)}
+                              onBlur={(e) => setOtherCityAddress(capitalizeWords(e.target.value))}
+                              placeholder="Ex: San Pédro"
+                              className={inputClass + " pl-12"}
+                            />
+                          </div>
                         </div>
                       </motion.div>
                     )}
