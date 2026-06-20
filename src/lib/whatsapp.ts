@@ -7,7 +7,6 @@ export const productMessage = (name: string, _price: number) =>
   `Bonjour, je suis intéressée par le ${name}. Est-il disponible ?`;
 
 export const generalMessage =
-  "Bonjour, je souhaite commander un sac. Pouvez-vous me donner les modalités de livraison ?";
-
+  "Bonjour, je souhaite commander un article. Pouvez-vous me donner plus de détail sur vos différents articles?";
 export const codMessage =
   "Bonjour, je veux passer une commande. Est-ce possible de payer à la livraison ?";
